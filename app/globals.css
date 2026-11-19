@@ -1068,3 +1068,230 @@ bdi {
   color: var(--muted);
   font-size: 14px;
 }
+
+/* Enhanced newsroom post cards, platform/group avatars, source links & scannability */
+.story {
+  padding: 18px 22px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 2px rgba(7, 23, 44, 0.03);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.story:hover {
+  border-color: #b7d2e4;
+  box-shadow: 0 4px 14px rgba(7, 23, 44, 0.06);
+}
+.source-avatar.kind-page {
+  background: #e7f0fe;
+  border-color: #c8defc;
+  color: #1877f2;
+}
+.source-avatar.kind-group {
+  background: #e3f5f3;
+  border-color: #bde6e1;
+  color: #0b6e6d;
+}
+.source-avatar.kind-x {
+  background: #eef1f5;
+  border-color: #cfd7e0;
+  color: #0f172a;
+}
+.byline {
+  align-items: flex-start;
+}
+.byline-meta {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.source-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.source-title-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.source-title-link {
+  color: var(--navy);
+  font-weight: 700;
+  font-size: 15.5px;
+}
+.source-title-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.source-type-pill {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #eef3f7;
+  color: #3f586c;
+}
+.source-type-pill.kind-group {
+  background: #e4f5f3;
+  color: #0b6e6d;
+}
+.source-type-pill.kind-page {
+  background: #eaf2fe;
+  color: #155ec2;
+}
+.observed-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.dot-sep {
+  opacity: 0.5;
+}
+.source-handle-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #3f6a86;
+  font-size: 12px;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.source-handle-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+}
+.kind.media-photo {
+  background: #e7f4fd;
+  color: #0369a1;
+}
+.kind.media-video {
+  background: #eef2ff;
+  color: #4338ca;
+}
+.kind.media-text {
+  background: #f1f5f9;
+  color: #475569;
+}
+.story-body {
+  font-size: 16.5px;
+  line-height: 1.85;
+  color: var(--ink);
+}
+.read-more-btn {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid #cce3f2;
+  background: #f2f8fc;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 650;
+}
+.read-more-btn:hover {
+  background: #e4f2fb;
+}
+.media-link-card.media-video .media-link-icon {
+  background: #1e1b4b;
+  color: #a5b4fc;
+}
+.eng-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #f4f7fa;
+  border: 1px solid #e4ecf2;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.eng-pill strong {
+  color: var(--navy);
+}
+.open-original-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  background: #eef6fc;
+  border: 1px solid #c7e1f4;
+  color: var(--accent);
+  font-size: 13.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.open-original-btn:hover {
+  background: #e0f0fb;
+  border-color: var(--accent);
+}
+.source-side-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.source-side-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  text-align: start;
+}
+.side-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  flex: none;
+}
+.side-icon.kind-page {
+  background: #e7f0fe;
+  color: #1877f2;
+}
+.side-icon.kind-group {
+  background: #e3f5f3;
+  color: #0b6e6d;
+}
+.side-icon.kind-x {
+  background: #eef1f5;
+  color: #0f172a;
+}
+.side-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.side-ext {
+  color: var(--muted);
+  padding: 4px;
+  border-radius: 5px;
+  flex: none;
+}
+.side-ext:hover {
+  color: var(--accent);
+  background: #eef6fc;
+}
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}

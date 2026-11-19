@@ -168,6 +168,29 @@ test("bootstrap is idempotent, public signup is disabled, and real sessions enfo
     assert.equal(receipts.rows[0].status, "بدأت المتابعة");
     assert.equal(receipts.rows[1].status, "رابط غير مدعوم");
 
+    // Admin CAN rename a Facebook group source; editor CANNOT
+    const renameDenied = await fetch(
+      `${srv.url}/functions/v1/admin-api/sources/${LEGACY_SOURCE_UUIDS["group-783"]}`,
+      {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${editor1Jwt}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "اسم غير مصرح" }),
+      },
+    );
+    assert.equal(renameDenied.status, 403);
+
+    const renameOk = await fetch(
+      `${srv.url}/functions/v1/admin-api/sources/${LEGACY_SOURCE_UUIDS["group-783"]}`,
+      {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${adminJwt}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "جروب أخبار المحافظات" }),
+      },
+    );
+    assert.equal(renameOk.status, 200);
+    const renamed = await renameOk.json();
+    assert.equal(renamed.name, "جروب أخبار المحافظات");
+
     // Sign out revokes session access immediately
     await editor1.auth.signOut();
     const afterLogout = await fetch(`${srv.url}/rest/v1/rpc/newsroom_workspaces`, {

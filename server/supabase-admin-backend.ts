@@ -344,6 +344,15 @@ export function createSupabaseAdminBackend(options: {
       return data;
     },
 
+    async renameSource(admin, sourceId, name) {
+      const { data, error } = await userClient(admin.jwt).rpc(
+        "newsroom_admin_rename_source",
+        { p_source: sourceId, p_name: name },
+      );
+      if (error) throw new HttpError(400, error.message, "rename_failed");
+      return data;
+    },
+
     async setReferenceDate(admin, referenceAt, label) {
       const { data, error } = await userClient(admin.jwt).rpc(
         "newsroom_admin_set_reference",

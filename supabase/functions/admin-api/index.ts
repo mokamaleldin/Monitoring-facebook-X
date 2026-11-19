@@ -236,6 +236,17 @@ Deno.serve(async (req: Request) => {
     return json(200, data);
   }
 
+  const renameSrc = path.match(/^\/sources\/([^/]+)$/);
+  if (req.method === "PATCH" && renameSrc) {
+    const sourceId = decodeURIComponent(renameSrc[1]);
+    if (!UUID_RE.test(sourceId)) return json(400, { error: "معرّف المصدر غير صالح." });
+    const { data, error } = await asAdmin.rpc("newsroom_admin_rename_source", {
+      p_source: sourceId, p_name: String(body.name ?? "").trim(),
+    });
+    if (error) return json(400, { error: error.message });
+    return json(200, data);
+  }
+
   if (req.method === "POST" && path === "/reference-date") {
     const { data, error } = await asAdmin.rpc("newsroom_admin_set_reference", {
       p_reference_at: body.referenceAt || null, p_label: body.label || null,

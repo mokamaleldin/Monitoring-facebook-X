@@ -100,6 +100,11 @@ export interface AdminBackend {
     locator: string,
     name: string,
   ): Promise<{ sourceId: string; locator: string; name: string }>;
+  renameSource(
+    admin: VerifiedAdmin,
+    sourceId: string,
+    name: string,
+  ): Promise<{ id: string; name: string; locator: string }>;
   setReferenceDate(
     admin: VerifiedAdmin,
     referenceAt: string | null,
@@ -387,6 +392,22 @@ export async function handleAdminRequest(
         name,
       );
       return { status: 200, body: approved };
+    }
+
+    // PATCH /sources/:sourceId — rename a source (e.g. give a real Arabic name to a Facebook group)
+    const renameSrcMatch = path.match(/^\/sources\/([^/]+)$/);
+    if (method === "PATCH" && renameSrcMatch) {
+      const sourceId = decodeURIComponent(renameSrcMatch[1]);
+      if (!UUID_RE.test(sourceId)) {
+        throw new HttpError(400, "معرّف المصدر غير صالح.", "invalid_source");
+      }
+      const data = asObject(req.body);
+      const name = String(data.name ?? "").trim();
+      if (!name || name.length > 120) {
+        throw new HttpError(400, "اكتب اسمًا صالحًا للمصدر (حتى ١٢٠ حرفًا).", "invalid_name");
+      }
+      const renamed = await backend.renameSource(admin, sourceId, name);
+      return { status: 200, body: renamed };
     }
 
     // POST /reference-date

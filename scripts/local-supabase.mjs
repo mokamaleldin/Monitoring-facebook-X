@@ -211,6 +211,17 @@ export async function startLocalSupabase(options = {}) {
       );
       await db.exec(m2);
     }
+
+    const hasRenameFn = await db.query(
+      "select exists(select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'newsroom_admin_rename_source') as ok",
+    );
+    if (!hasRenameFn.rows[0]?.ok) {
+      const m3 = await readFile(
+        new URL("../supabase/migrations/202611200003_rename_source.sql", import.meta.url),
+        "utf8",
+      );
+      await db.exec(m3);
+    }
   });
 
   async function issueSession(userRow) {
@@ -476,6 +487,14 @@ export async function startLocalSupabase(options = {}) {
         p_locator: locator,
         p_name: name,
         p_native_key: null,
+      });
+    },
+
+    async renameSource(admin, sourceId, name) {
+      const caller = { role: "authenticated", userId: admin.userId };
+      return callRpc(caller, "newsroom_admin_rename_source", {
+        p_source: sourceId,
+        p_name: name,
       });
     },
 

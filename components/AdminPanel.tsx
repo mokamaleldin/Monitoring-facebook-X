@@ -12,6 +12,7 @@ import {
   type AdminOverview,
 } from "../lib/model";
 import { Brand, ConfigMissingGate, SignIn } from "./SignIn";
+import { ExternalIcon, shortSourceDisplay, SourceKindIcon } from "./Icons";
 
 type AdminTab = "orgs" | "manage" | "runs";
 
@@ -136,12 +137,14 @@ function AdminWorkspace({ session }: { session: Session }) {
     orgId: string;
   } | null>(null);
 
-  // Selected org batch sources + approval
+  // Selected org batch sources + approval + rename
   const [sourceLines, setSourceLines] = useState("");
   const [sourceReceipts, setSourceReceipts] = useState<
     { url: string; status: string }[]
   >([]);
   const [approveNames, setApproveNames] = useState<Record<string, string>>({});
+  const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
+  const [editingSourceName, setEditingSourceName] = useState("");
 
   // Collection trigger state
   const [runKey, setRunKey] = useState(
@@ -411,6 +414,27 @@ function AdminWorkspace({ session }: { session: Session }) {
       await refresh();
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "تعذّر اعتماد المصدر.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRenameSource(sourceId: string) {
+    const clean = editingSourceName.trim();
+    if (!clean) {
+      setErrorMsg("اكتب اسم المصدر الجديد قبل الحفظ.");
+      return;
+    }
+    clearFeedback();
+    setBusy(true);
+    try {
+      const updated = await backend.adminRenameSource(sourceId, clean);
+      setEditingSourceId(null);
+      setEditingSourceName("");
+      setNotice(`تم تحديث اسم المصدر إلى «${updated.name}» وسيظهر فورًا في تيار الأخبار.`);
+      await refresh();
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "تعذّر تحديث اسم المصدر.");
     } finally {
       setBusy(false);
     }
@@ -871,34 +895,116 @@ function AdminWorkspace({ session }: { session: Session }) {
                         )}
                         {selectedOrg.sources.map((s) => (
                           <div key={s.id} className="source-row">
-                            <span className="source-avatar small">
-                              {s.name.charAt(0)}
+                            <span
+                              className={`source-avatar small kind-${s.platform === "x" ? "x" : s.kind}`}
+                            >
+                              <SourceKindIcon
+                                platform={s.platform}
+                                kind={s.kind}
+                                size={17}
+                              />
                             </span>
                             <div className="grow">
-                              <strong>{s.name}</strong>
-                              <div className="minor">
-                                {platformName[s.platform]} ·{" "}
-                                {s.kind === "group"
-                                  ? "جروب عام"
-                                  : s.kind === "account"
-                                    ? "حساب"
-                                    : "صفحة"}{" "}
-                                · {s.active ? "نشط" : "متوقف"}
-                              </div>
+                              {editingSourceId === s.id ? (
+                                <div className="approve-inline">
+                                  <input
+                                    type="text"
+                                    aria-label="اسم المصدر الجديد"
+                                    maxLength={120}
+                                    value={editingSourceName}
+                                    onChange={(e) =>
+                                      setEditingSourceName(e.target.value)
+                                    }
+                                  />
+                                  <button
+                                    className="primary"
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => void handleRenameSource(s.id)}
+                                  >
+                                    حفظ
+                                  </button>
+                                  <button
+                                    className="secondary"
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => {
+                                      setEditingSourceId(null);
+                                      setEditingSourceName("");
+                                    }}
+                                  >
+                                    إلغاء
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="source-title-row">
+                                    <a
+                                      className="source-title-link"
+                                      href={sourceUrl(s.locator)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      {s.name}
+                                    </a>
+                                    <span className={`source-type-pill kind-${s.kind}`}>
+                                      {s.kind === "group"
+                                        ? "جروب عام"
+                                        : s.kind === "account"
+                                          ? "حساب"
+                                          : "صفحة"}
+                                    </span>
+                                  </div>
+                                  <div className="observed-row">
+                                    <span className="minor">
+                                      {platformName[s.platform]} ·{" "}
+                                      {s.active ? "نشط" : "متوقف"}
+                                    </span>
+                                    <span className="dot-sep" aria-hidden>
+                                      •
+                                    </span>
+                                    <a
+                                      className="source-handle-link"
+                                      dir="ltr"
+                                      href={sourceUrl(s.locator)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      {shortSourceDisplay(s.locator)}{" "}
+                                      <ExternalIcon size={11} />
+                                    </a>
+                                  </div>
+                                </>
+                              )}
                             </div>
-                            <button
-                              className="secondary"
-                              disabled={busy}
-                              onClick={() =>
-                                void handleToggleOrgSource(
-                                  s.id,
-                                  s.locator,
-                                  s.active,
-                                )
-                              }
-                            >
-                              {s.active ? "إيقاف" : "استئناف"}
-                            </button>
+                            {editingSourceId !== s.id && (
+                              <div className="row-actions">
+                                <button
+                                  className="secondary"
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => {
+                                    setEditingSourceId(s.id);
+                                    setEditingSourceName(s.name);
+                                  }}
+                                >
+                                  تعديل الاسم
+                                </button>
+                                <button
+                                  className="secondary"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void handleToggleOrgSource(
+                                      s.id,
+                                      s.locator,
+                                      s.active,
+                                    )
+                                  }
+                                >
+                                  {s.active ? "إيقاف" : "استئناف"}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </section>

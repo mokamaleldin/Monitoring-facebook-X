@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { platformName, sourceUrl, type Snapshot } from "../lib/model";
+import { ExternalIcon, shortSourceDisplay, SourceKindIcon } from "./Icons";
 type Entry = { url: string; status: string };
 type Props = {
   data: Snapshot;
@@ -54,17 +55,45 @@ export function Sources({
           )}
           {data.sources.map((s) => (
             <div key={s.id} className="source-row">
-              <span className="source-avatar small">{s.name.charAt(0)}</span>
+              <span
+                className={`source-avatar small kind-${s.platform === "x" ? "x" : s.kind}`}
+              >
+                <SourceKindIcon platform={s.platform} kind={s.kind} size={17} />
+              </span>
               <div className="grow">
-                <strong>{s.name}</strong>
-                <div className="minor">
-                  {platformName[s.platform]} ·{" "}
-                  {s.kind === "group"
-                    ? "جروب عام"
-                    : s.kind === "account"
-                      ? "حساب"
-                      : "صفحة"}{" "}
-                  · {s.active ? "نشط" : "متوقف"}
+                <div className="source-title-row">
+                  <a
+                    className="source-title-link"
+                    href={sourceUrl(s.locator)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {s.name}
+                  </a>
+                  <span className={`source-type-pill kind-${s.kind}`}>
+                    {s.kind === "group"
+                      ? "جروب عام"
+                      : s.kind === "account"
+                        ? "حساب"
+                        : "صفحة"}
+                  </span>
+                </div>
+                <div className="observed-row">
+                  <span className="minor">
+                    {platformName[s.platform]} · {s.active ? "نشط" : "متوقف"}
+                  </span>
+                  <span className="dot-sep" aria-hidden>
+                    •
+                  </span>
+                  <a
+                    className="source-handle-link"
+                    dir="ltr"
+                    href={sourceUrl(s.locator)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {shortSourceDisplay(s.locator)} <ExternalIcon size={11} />
+                  </a>
                 </div>
               </div>
               <button

@@ -288,6 +288,16 @@ export async function adminApproveRequest(
   );
 }
 
+export async function adminRenameSource(
+  sourceId: string,
+  name: string,
+): Promise<{ id: string; name: string; locator: string }> {
+  return callServerJson<{ id: string; name: string; locator: string }>(
+    `${adminApiBase}/sources/${encodeURIComponent(sourceId)}`,
+    { method: "PATCH", body: { name } },
+  );
+}
+
 export async function adminSetReference(
   referenceAt: string | null,
   label: string | null,

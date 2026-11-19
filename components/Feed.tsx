@@ -13,6 +13,12 @@ import {
   type Post,
   type Subscription,
 } from "../lib/model";
+import {
+  ExternalIcon,
+  MediaTypeIcon,
+  shortSourceDisplay,
+  SourceKindIcon,
+} from "./Icons";
 
 const options = [
   ["all", "الكل"],
@@ -22,6 +28,12 @@ const options = [
 ] as const;
 
 const PAGE_SIZE = 8;
+
+const kindLabel: Record<"page" | "group" | "account", string> = {
+  page: "صفحة",
+  group: "جروب عام",
+  account: "حساب",
+};
 
 function safeLink(value: string | null | undefined, local = false) {
   if (!value) return undefined;
@@ -52,11 +64,32 @@ function uniqueSafeUrls(
   return out;
 }
 
-function Article({ post, fallbackUrl }: { post: Post; fallbackUrl?: string }) {
+function Article({
+  post,
+  sourceMap,
+}: {
+  post: Post;
+  sourceMap: Map<string, Subscription>;
+}) {
   const [expanded, setExpanded] = useState(false);
   const [photoIdx, setPhotoIdx] = useState(0);
   const [videoIdx, setVideoIdx] = useState(0);
   const [thumbIdx, setThumbIdx] = useState(0);
+
+  const enrichedSources = post.sources.map((s) => {
+    const meta = sourceMap.get(s.id);
+    return {
+      id: s.id,
+      name: meta?.name || s.name,
+      platform: meta?.platform || post.platform,
+      kind: meta?.kind || (post.platform === "x" ? "account" : "page"),
+      locator: meta?.locator || null,
+      url: meta?.locator ? sourceUrl(meta.locator) : undefined,
+    };
+  });
+
+  const primarySource = enrichedSources[0];
+  const fallbackUrl = primarySource?.url;
 
   const items = post.mediaItems ?? [];
   const photoUrls = uniqueSafeUrls(
@@ -107,27 +140,90 @@ function Article({ post, fallbackUrl }: { post: Post; fallbackUrl?: string }) {
       ? "اضغط هنا لمشاهدة الفيديو"
       : "اضغط هنا لمشاهدة الصورة";
 
+  const avatarVariant =
+    primarySource?.platform === "x"
+      ? "x"
+      : primarySource?.kind === "group"
+        ? "group"
+        : "page";
+
   return (
     <article className="story">
-      <div className="byline">
-        <span className="source-avatar" aria-hidden>
-          {post.sources[0]?.name.charAt(0) || "م"}
+      <header className="byline">
+        <span
+          className={`source-avatar kind-${avatarVariant}`}
+          title={
+            primarySource
+              ? `${platformName[primarySource.platform]} · ${kindLabel[primarySource.kind]}`
+              : undefined
+          }
+        >
+          <SourceKindIcon
+            platform={primarySource?.platform || post.platform}
+            kind={primarySource?.kind || "page"}
+            size={21}
+          />
         </span>
-        <div>
-          <strong>{post.sources.map((s) => s.name).join(" · ")}</strong>
-          <div className="observed">
-            رُصد <time dateTime={post.seenAt}>{cairoTime(post.seenAt)}</time>
+
+        <div className="byline-meta">
+          <div className="source-title-row">
+            {enrichedSources.map((src, idx) => (
+              <span key={src.id} className="source-title-item">
+                {idx > 0 && <span className="sep">·</span>}
+                {src.url ? (
+                  <a
+                    className="source-title-link"
+                    href={src.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {src.name}
+                  </a>
+                ) : (
+                  <strong>{src.name}</strong>
+                )}
+                <span className={`source-type-pill kind-${src.kind}`}>
+                  {kindLabel[src.kind]}
+                </span>
+              </span>
+            ))}
+          </div>
+
+          <div className="observed-row">
+            <span className="observed">
+              رُصد <time dateTime={post.seenAt}>{cairoTime(post.seenAt)}</time>
+            </span>
+            {primarySource?.locator && primarySource.url && (
+              <>
+                <span className="dot-sep" aria-hidden>
+                  •
+                </span>
+                <a
+                  className="source-handle-link"
+                  dir="ltr"
+                  href={primarySource.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {shortSourceDisplay(primarySource.locator)}
+                </a>
+              </>
+            )}
           </div>
         </div>
+
         <div className="kind-group">
-          <span className="kind">{mediaName[post.media]}</span>
+          <span className={`kind media-${post.media}`}>
+            <MediaTypeIcon media={post.media} size={13} />
+            {mediaName[post.media]}
+          </span>
           {items.length > 1 && (
             <span className="kind subtle">
               {items.length.toLocaleString("ar-EG")} مرفقات
             </span>
           )}
         </div>
-      </div>
+      </header>
 
       {trimmedText ? (
         <div className="story-text-wrap">
@@ -141,11 +237,11 @@ function Article({ post, fallbackUrl }: { post: Post; fallbackUrl?: string }) {
           {isLongText && (
             <button
               type="button"
-              className="link read-more-btn"
+              className="read-more-btn"
               aria-expanded={expanded}
               onClick={() => setExpanded((v) => !v)}
             >
-              {expanded ? "عرض أقل" : "اقرأ المزيد"}
+              {expanded ? "عرض أقل ↑" : "اقرأ المزيد ↓"}
             </button>
           )}
         </div>
@@ -163,6 +259,7 @@ function Article({ post, fallbackUrl }: { post: Post; fallbackUrl?: string }) {
           width={activePhoto === "/demo/program.png" ? 900 : undefined}
           height={activePhoto === "/demo/program.png" ? 300 : undefined}
           loading="lazy"
+          referrerPolicy="no-referrer"
           onError={() => setPhotoIdx((i) => i + 1)}
         />
       )}
@@ -187,6 +284,7 @@ function Article({ post, fallbackUrl }: { post: Post; fallbackUrl?: string }) {
             src={activeThumb}
             alt="لقطة معاينة للفيديو"
             loading="lazy"
+            referrerPolicy="no-referrer"
             onError={() => setThumbIdx((i) => i + 1)}
           />
           {targetUrl && (
@@ -197,7 +295,8 @@ function Article({ post, fallbackUrl }: { post: Post; fallbackUrl?: string }) {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <span aria-hidden>▶</span> {mediaActionLabel}
+                <MediaTypeIcon media="video" size={14} /> {mediaActionLabel}{" "}
+                <ExternalIcon size={13} />
               </a>
             </figcaption>
           )}
@@ -208,13 +307,13 @@ function Article({ post, fallbackUrl }: { post: Post; fallbackUrl?: string }) {
         (post.media === "video" && !activeVideo && !activeThumb)) &&
         targetUrl && (
           <a
-            className="media-link-card"
+            className={`media-link-card media-${post.media}`}
             href={targetUrl}
             target="_blank"
             rel="noopener noreferrer"
           >
             <span className="media-link-icon" aria-hidden>
-              {post.media === "video" ? "▶" : "▣"}
+              <MediaTypeIcon media={post.media} size={19} />
             </span>
             <span className="media-link-copy">
               <strong>{mediaHeading}</strong>
@@ -222,31 +321,33 @@ function Article({ post, fallbackUrl }: { post: Post; fallbackUrl?: string }) {
                 <span className="media-link-sub">{firstLineTitle}</span>
               )}
             </span>
-            <span className="media-link-cta">{mediaActionLabel} ↗</span>
+            <span className="media-link-cta">
+              {mediaActionLabel} <ExternalIcon size={13} />
+            </span>
           </a>
         )}
 
       {hasEngagement && (
         <div className="engagement-row" aria-label="التفاعل المتاح وقت الرصد">
           {eng.reactions !== null && (
-            <span>
-              تفاعل: <strong>{eng.reactions.toLocaleString("ar-EG")}</strong>
+            <span className="eng-pill">
+              تفاعل <strong>{eng.reactions.toLocaleString("ar-EG")}</strong>
             </span>
           )}
           {eng.comments !== null && (
-            <span>
-              تعليقات: <strong>{eng.comments.toLocaleString("ar-EG")}</strong>
+            <span className="eng-pill">
+              تعليقات <strong>{eng.comments.toLocaleString("ar-EG")}</strong>
             </span>
           )}
           {eng.shares !== null && (
-            <span>
-              مشاركات: <strong>{eng.shares.toLocaleString("ar-EG")}</strong>
+            <span className="eng-pill">
+              مشاركات <strong>{eng.shares.toLocaleString("ar-EG")}</strong>
             </span>
           )}
         </div>
       )}
 
-      <div className="story-foot">
+      <footer className="story-foot">
         <details>
           <summary>تفاصيل المنشور</summary>
           <dl>
@@ -265,18 +366,35 @@ function Article({ post, fallbackUrl }: { post: Post; fallbackUrl?: string }) {
             <dd>{cairoTime(post.seenAt)}</dd>
             <dt>المنصة</dt>
             <dd>{platformName[post.platform]}</dd>
+            {primarySource?.url && (
+              <>
+                <dt>رابط المصدر</dt>
+                <dd>
+                  <a
+                    dir="ltr"
+                    href={primarySource.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {primarySource.url}
+                  </a>
+                </dd>
+              </>
+            )}
           </dl>
         </details>
-        {(original || fallbackUrl) && (
+        {targetUrl && (
           <a
-            href={original || fallbackUrl}
+            className="open-original-btn"
+            href={targetUrl}
             target="_blank"
             rel="noopener noreferrer"
           >
-            {original ? "فتح المنشور الأصلي" : "صفحة المصدر"}
+            {original ? "فتح المنشور الأصلي" : "صفحة المصدر"}{" "}
+            <ExternalIcon size={13} />
           </a>
         )}
-      </div>
+      </footer>
     </article>
   );
 }
@@ -317,20 +435,19 @@ export function Feed({
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const active = sources.filter((s) => s.active && s.platform === platform);
+  const sourceMap = new Map(sources.map((s) => [s.id, s]));
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(queryInput), 220);
     return () => clearTimeout(timer);
   }, [queryInput]);
 
-  // Reset source selection if it is no longer active on this platform
   useEffect(() => {
     if (source && !active.some((s) => s.id === source)) {
       setSource("");
     }
   }, [active, source]);
 
-  // Fetch page 1 whenever filters or subscriptions change (DB applies permissions + filters before limit)
   useEffect(() => {
     const seq = ++requestSeq.current;
     setLoading(true);
@@ -400,7 +517,6 @@ export function Feed({
     debouncedQuery,
   ]);
 
-  // Infinite scroll via IntersectionObserver (never calls external providers, only DB cursor)
   useEffect(() => {
     const node = sentinelRef.current;
     if (!node || !hasMore || loading || loadingMore) return;
@@ -465,7 +581,9 @@ export function Feed({
             value={source}
             onChange={(e) => setSource(e.target.value)}
           >
-            <option value="">كل المصادر ({active.length.toLocaleString("ar-EG")})</option>
+            <option value="">
+              كل المصادر ({active.length.toLocaleString("ar-EG")})
+            </option>
             {active.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -499,16 +617,9 @@ export function Feed({
             </div>
           ) : posts.length > 0 ? (
             <>
-              {posts.map((p) => {
-                const s = active.find((item) => item.id === p.sources[0]?.id);
-                return (
-                  <Article
-                    key={p.id}
-                    post={p}
-                    fallbackUrl={s ? sourceUrl(s.locator) : undefined}
-                  />
-                );
-              })}
+              {posts.map((p) => (
+                <Article key={p.id} post={p} sourceMap={sourceMap} />
+              ))}
               <div ref={sentinelRef} className="pager-foot">
                 {hasMore ? (
                   <button
@@ -516,11 +627,14 @@ export function Feed({
                     disabled={loadingMore}
                     onClick={loadMore}
                   >
-                    {loadingMore ? "جارٍ تحميل الدفعة التالية…" : "تحميل المزيد"}
+                    {loadingMore
+                      ? "جارٍ تحميل الدفعة التالية…"
+                      : "تحميل المزيد"}
                   </button>
                 ) : (
                   <span className="minor">
-                    تم عرض جميع المنشورات المطابقة ({totalCount.toLocaleString("ar-EG")}).
+                    تم عرض جميع المنشورات المطابقة (
+                    {totalCount.toLocaleString("ar-EG")}).
                   </span>
                 )}
               </div>
@@ -549,19 +663,40 @@ export function Feed({
           {active.length ? (
             <ul>
               {active.map((s) => (
-                <li key={s.id}>
+                <li key={s.id} className="source-side-item">
                   <button
+                    className="source-side-btn"
                     aria-pressed={source === s.id}
                     onClick={() => setSource(source === s.id ? "" : s.id)}
                   >
-                    <span className="tiny-dot" />
-                    {s.name}
+                    <span
+                      className={`side-icon kind-${s.platform === "x" ? "x" : s.kind}`}
+                    >
+                      <SourceKindIcon
+                        platform={s.platform}
+                        kind={s.kind}
+                        size={14}
+                      />
+                    </span>
+                    <span className="side-name">{s.name}</span>
                   </button>
+                  <a
+                    className="side-ext"
+                    href={sourceUrl(s.locator)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`فتح ${s.name}`}
+                    title={shortSourceDisplay(s.locator)}
+                  >
+                    <ExternalIcon size={13} />
+                  </a>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="minor">لا توجد مصادر نشطة على {platformName[platform]}.</p>
+            <p className="minor">
+              لا توجد مصادر نشطة على {platformName[platform]}.
+            </p>
           )}
           <button className="link" onClick={openSources}>
             إدارة المصادر
