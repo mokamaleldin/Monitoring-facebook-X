@@ -15,6 +15,21 @@ import { Brand, ConfigMissingGate, SignIn } from "./SignIn";
 
 type AdminTab = "orgs" | "manage" | "runs";
 
+const runStatusLabel: Record<string, string> = {
+  completed: "مكتملة",
+  stopped: "توقفت عند الحد",
+  failed: "تعذّرت",
+  running: "جارٍ السحب",
+};
+
+const itemStatusLabel: Record<string, string> = {
+  ok: "نجح",
+  error: "خطأ",
+  uncertain: "نتيجة غير مؤكدة",
+  attempted: "قيد المحاولة",
+  skipped: "تم تخطيه",
+};
+
 function OrgSettingsEditor({
   org,
   busy,
@@ -988,81 +1003,114 @@ function AdminWorkspace({ session }: { session: Session }) {
 
           {tab === "runs" && (
             <>
+              <div className="stats-grid">
+                <div className="stat-card">
+                  <span className="minor">مصادر فيسبوك النشطة للسحب</span>
+                  <strong>
+                    {overview.uniqueActiveFacebookSources.toLocaleString("ar-EG")}
+                  </strong>
+                  <span className="minor">كل مصدر مشترك يُسحب مرة واحدة فقط</span>
+                </div>
+                <div className="stat-card">
+                  <span className="minor">سقف السحبة اليدوية الواحدة</span>
+                  <strong>٥ طلبات · ٥ Credits</strong>
+                  <span className="minor">أحدث ٣ منشورات لكل مصدر (بلا تشغيل تلقائي)</span>
+                </div>
+                <div className="stat-card">
+                  <span className="minor">حالة الربط مع مزود البيانات</span>
+                  <strong>
+                    {overview.collectorConfigured ? "جاهز للسحب" : "غير مربوط بعد"}
+                  </strong>
+                  <span className="minor">
+                    {overview.collectorConfigured
+                      ? "مفتاح المزود مضبوط على الخادم"
+                      : "لن يُخصم أي رصيد قبل إضافة المفتاح على الخادم"}
+                  </span>
+                </div>
+              </div>
+
               <div className="admin-two-col">
                 <section className="source-panel">
-                  <h2>مرجع نافذة العرض (العينة مقابل التيار الحي)</h2>
+                  <h2>سحب أخبار فيسبوك الآن (سحبة يدوية واحدة)</h2>
+                  <p className="minor panel-desc">
+                    يجلب أحدث ٣ منشورات من كل صفحة أو جروب فيسبوك نشط لجميع الجهات
+                    في سحبة واحدة، ويوزّع أخبار المصادر المشتركة تلقائيًا دون تكرار
+                    الدفع لمزود البيانات.
+                  </p>
+                  <form onSubmit={handleRunCollection} className="admin-form">
+                    <button className="primary" type="submit" disabled={busy}>
+                      {busy
+                        ? "جارٍ تنفيذ السحبة…"
+                        : "ابدأ سحبة فيسبوك واحدة الآن"}
+                    </button>
+                    <details className="advanced-toggle">
+                      <summary>إعداد متقدم: رمز منع تكرار السحبة</summary>
+                      <div className="field">
+                        <label htmlFor="collect-run-key">
+                          رمز السحبة (يمنع الخصم مرتين لو ضغطت الزرار بالغلط)
+                        </label>
+                        <input
+                          id="collect-run-key"
+                          dir="ltr"
+                          type="text"
+                          required
+                          maxLength={120}
+                          value={runKey}
+                          onChange={(e) => setRunKey(e.target.value)}
+                        />
+                      </div>
+                    </details>
+                  </form>
+                </section>
+
+                <section className="source-panel">
+                  <h2>توقيت عرض الأخبار للمحررين</h2>
+                  <p className="minor panel-desc">
+                    يعرض تيار الأخبار منشورات آخر ٧ أيام تلقائيًا. لأن العينة
+                    المحفوظة تعود ليوم ٦ نوفمبر، يمكنك التبديل بين عرض العينة الآن
+                    أو التوقيت المباشر عند تشغيل السحب اليومي.
+                  </p>
                   <p className="minor">
-                    الوضع الحالي:{" "}
+                    الوضع المفعل حاليًا:{" "}
                     <strong>
                       {overview.referenceAt
-                        ? `عرض مرجعي (${overview.referenceLabel || overview.referenceAt.slice(0, 10)})`
-                        : "التيار الحي (توقيت اليوم الطبيعي)"}
+                        ? `وضع العينة (${overview.referenceLabel || overview.referenceAt.slice(0, 10)})`
+                        : "التوقيت المباشر (أخبار اليوم)"}
                     </strong>
                   </p>
                   <div className="action-row">
                     <button
-                      className="secondary"
+                      className={overview.referenceAt ? "primary" : "secondary"}
+                      aria-pressed={Boolean(overview.referenceAt)}
                       disabled={busy}
                       onClick={() => void handleReferenceToggle(true)}
                     >
-                      تفعيل مرجع لقطة ٦ نوفمبر ٢٠٢٦
+                      عرض عينة ٦ نوفمبر
                     </button>
                     <button
-                      className="secondary"
+                      className={!overview.referenceAt ? "primary" : "secondary"}
+                      aria-pressed={!overview.referenceAt}
                       disabled={busy}
                       onClick={() => void handleReferenceToggle(false)}
                     >
-                      إعادة إلى التوقيت الحي
+                      التوقيت المباشر (اليوم)
                     </button>
                   </div>
-                </section>
-
-                <section className="source-panel">
-                  <h2>دورة جمع Facebook واحدة (محدودة)</h2>
-                  <p className="minor">
-                    سقف الدورة: <strong>٥ طلبات منشورات</strong> ·{" "}
-                    <strong>٥ Credits كحد أقصى</strong> ·{" "}
-                    <strong>٣ منشورات/مصدر</strong> · صفحة نتائج واحدة · بدون
-                    جدولة أو إعادة تلقائية.
-                  </p>
-                  <p className="minor">
-                    حالة <code>SOCIALAPIS_API_KEY</code> على الخادم:{" "}
-                    <strong>
-                      {overview.collectorConfigured
-                        ? "مضبوط وجاهز"
-                        : "غير مضبوط على الخادم (لن يُخصم رصيد)"}
-                    </strong>
-                  </p>
-                  <form onSubmit={handleRunCollection} className="admin-form">
-                    <div className="field">
-                      <label htmlFor="collect-run-key">
-                        معرّف التشغيل الثابت (Idempotency Key)
-                      </label>
-                      <input
-                        id="collect-run-key"
-                        dir="ltr"
-                        type="text"
-                        required
-                        maxLength={120}
-                        value={runKey}
-                        onChange={(e) => setRunKey(e.target.value)}
-                      />
-                    </div>
-                    <button className="primary" type="submit" disabled={busy}>
-                      {busy
-                        ? "جارٍ تنفيذ الدورة…"
-                        : "تشغيل دورة Facebook واحدة"}
-                    </button>
-                  </form>
                 </section>
               </div>
 
               <section className="source-panel">
-                <h2 id="runs-table-caption">سجل دورات الجمع واستهلاك المزود</h2>
+                <h2 id="runs-table-caption">سجل السحبات وتكلفة المزود</h2>
+                <p className="minor panel-desc">
+                  دفتر متابعة لإدارة كشيدة فقط: يسجّل كل سحبة حية تمت، عدد الطلبات
+                  والرصيد المستهلك والمتبقي عند المزود، والأخبار الجديدة مقابل
+                  المكررة لكل مصدر.
+                </p>
                 {!overview.runs.length ? (
-                  <p className="minor">
-                    لم تُنفّذ أي دورة جمع حية بعد.
-                  </p>
+                  <div className="empty-inline">
+                    لم تُجرَ أي سحبة حية من فيسبوك بعد (٠ طلبات · ٠ Credits
+                    مستهلكة). عند تشغيل أول سحبة سيظهر التقرير الكامل هنا.
+                  </div>
                 ) : (
                   <div
                     tabIndex={0}
@@ -1073,72 +1121,87 @@ function AdminWorkspace({ session }: { session: Session }) {
                     <table className="data-table runs-table">
                       <thead>
                         <tr>
-                          <th scope="col">معرّف الدورة</th>
+                          <th scope="col">تاريخ السحبة والرمز</th>
                           <th scope="col">الحالة</th>
-                          <th scope="col">الطلبات / فحوص usage</th>
-                          <th scope="col">الخصم / المتبقي</th>
-                          <th scope="col">جديد / محدث</th>
-                          <th scope="col">التفاصيل</th>
+                          <th scope="col">الطلبات المنفذة</th>
+                          <th scope="col">الرصيد المستهلك / المتبقي</th>
+                          <th scope="col">الأخبار المضافة</th>
+                          <th scope="col">نتيجة كل مصدر</th>
                         </tr>
                       </thead>
                       <tbody>
                         {overview.runs.map((run) => (
                           <tr key={run.id}>
-                            <th scope="row" dir="ltr">
-                              {run.runKey}
-                              <div className="minor" dir="rtl">
-                                {cairoTime(run.startedAt)}
+                            <th scope="row">
+                              <div>{cairoTime(run.startedAt)}</div>
+                              <div className="minor" dir="ltr">
+                                {run.runKey}
                               </div>
                             </th>
                             <td>
-                              <strong>{run.status}</strong>
+                              <strong>
+                                {runStatusLabel[run.status] || run.status}
+                              </strong>
                               {run.stopReason && (
                                 <div className="minor">{run.stopReason}</div>
                               )}
                             </td>
                             <td>
-                              {run.requestsMade} / {run.requestCap} طلب ·{" "}
-                              {run.usageChecks} usage
+                              {run.requestsMade.toLocaleString("ar-EG")} من{" "}
+                              {run.requestCap.toLocaleString("ar-EG")} طلب
+                              <div className="minor">
+                                فحوص الرصيد:{" "}
+                                {run.usageChecks.toLocaleString("ar-EG")}
+                              </div>
                             </td>
                             <td>
-                              {run.creditsCharged} Credits
+                              {run.creditsCharged.toLocaleString("ar-EG")} Credits
                               {run.creditsUncertain ? " (غير مؤكد)" : ""}
                               {run.accountUsageDelta !== null && (
                                 <div className="minor">
-                                  فرق الحساب: {run.accountUsageDelta}
+                                  الفرق الفعلي:{" "}
+                                  {run.accountUsageDelta.toLocaleString("ar-EG")}
                                 </div>
                               )}
                               {run.creditsRemaining !== null && (
                                 <div className="minor">
-                                  المتبقي: {run.creditsRemaining}
+                                  المتبقي:{" "}
+                                  {run.creditsRemaining.toLocaleString("ar-EG")}
                                 </div>
                               )}
                             </td>
                             <td>
-                              +{run.insertedCount} جديد / {run.updatedCount} محدث
+                              +{run.insertedCount.toLocaleString("ar-EG")} جديد ·{" "}
+                              {run.updatedCount.toLocaleString("ar-EG")} محدث
                             </td>
                             <td>
                               <details>
                                 <summary>
-                                  المصادر ({run.items.length})
+                                  عرض المصادر (
+                                  {run.items.length.toLocaleString("ar-EG")})
                                 </summary>
                                 <ul className="receipts">
                                   {run.items.map((it) => (
                                     <li key={it.sourceId}>
                                       <strong>
-                                        {it.sourceName} ({it.status}
-                                        {it.httpStatus ? ` ${it.httpStatus}` : ""})
+                                        {it.sourceName} —{" "}
+                                        {itemStatusLabel[it.status] || it.status}
+                                        {it.httpStatus
+                                          ? ` (${it.httpStatus})`
+                                          : ""}
                                       </strong>
                                       <span className="minor">
                                         نتائج: {it.returnedCount} · جديد:{" "}
                                         {it.insertedCount} · محدث:{" "}
                                         {it.updatedCount}
-                                        {it.emptyResponse ? " · فارغ" : ""}
+                                        {it.emptyResponse
+                                          ? " · لا توجد منشورات جديدة"
+                                          : ""}
                                         {it.oldPostsCount > 0
                                           ? ` · قديم: ${it.oldPostsCount}`
                                           : ""}
                                         {it.missingTimeCount > 0
-                                          ? ` · بلا وقت: ${it.missingTimeCount}`
+                                          ? ` · بلا وقت نشر: ${it.missingTimeCount}`
                                           : ""}
                                         {it.errorMessage
                                           ? ` · ${it.errorMessage}`

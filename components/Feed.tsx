@@ -36,22 +36,76 @@ function safeLink(value: string | null | undefined, local = false) {
   return undefined;
 }
 
+function uniqueSafeUrls(
+  urls: (string | null | undefined)[],
+  allowLocal = false,
+): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of urls) {
+    const clean = safeLink(raw, allowLocal);
+    if (clean && !seen.has(clean)) {
+      seen.add(clean);
+      out.push(clean);
+    }
+  }
+  return out;
+}
+
 function Article({ post, fallbackUrl }: { post: Post; fallbackUrl?: string }) {
-  const [mediaBroken, setMediaBroken] = useState(false);
-  const [thumbBroken, setThumbBroken] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [photoIdx, setPhotoIdx] = useState(0);
+  const [videoIdx, setVideoIdx] = useState(0);
+  const [thumbIdx, setThumbIdx] = useState(0);
 
   const items = post.mediaItems ?? [];
-  const primaryMedia = safeLink(post.mediaUrl, true);
-  const fallbackPhoto =
-    post.media === "video"
-      ? safeLink(items.find((m) => m.type === "photo")?.url, true)
-      : undefined;
+  const photoUrls = uniqueSafeUrls(
+    [
+      post.media === "photo" ? post.mediaUrl : null,
+      ...items.filter((m) => m.type === "photo").map((m) => m.url),
+    ],
+    true,
+  );
+  const videoUrls = uniqueSafeUrls(
+    [
+      post.media === "video" ? post.mediaUrl : null,
+      ...items.filter((m) => m.type === "video").map((m) => m.url),
+    ],
+    true,
+  );
+
+  const activePhoto = photoUrls[photoIdx];
+  const activeVideo = videoUrls[videoIdx];
+  const activeThumb = post.media === "video" ? photoUrls[thumbIdx] : undefined;
   const original = safeLink(post.originalUrl);
+  const targetUrl = original || fallbackUrl;
+
+  const trimmedText = post.text.trim();
+  const isLongText =
+    trimmedText.length > 260 || trimmedText.split(/\r?\n/).length > 4;
+  const firstLineTitle =
+    trimmedText
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .find(Boolean)
+      ?.slice(0, 90) || "";
 
   const eng = post.engagement;
   const hasEngagement =
     eng &&
     (eng.reactions !== null || eng.comments !== null || eng.shares !== null);
+
+  const mediaHeading =
+    post.media === "video"
+      ? "فيديو مرفق بالمنشور"
+      : photoUrls.length > 1
+        ? `${photoUrls.length.toLocaleString("ar-EG")} صور مرفقة بالمنشور`
+        : "صورة مرفقة بالمنشور";
+
+  const mediaActionLabel =
+    post.media === "video"
+      ? "اضغط هنا لمشاهدة الفيديو"
+      : "اضغط هنا لمشاهدة الصورة";
 
   return (
     <article className="story">
@@ -75,65 +129,101 @@ function Article({ post, fallbackUrl }: { post: Post; fallbackUrl?: string }) {
         </div>
       </div>
 
-      {post.text.trim() ? (
-        <p className="story-body">{post.text}</p>
+      {trimmedText ? (
+        <div className="story-text-wrap">
+          <p
+            className={
+              isLongText && !expanded ? "story-body clamped" : "story-body"
+            }
+          >
+            {trimmedText}
+          </p>
+          {isLongText && (
+            <button
+              type="button"
+              className="link read-more-btn"
+              aria-expanded={expanded}
+              onClick={() => setExpanded((v) => !v)}
+            >
+              {expanded ? "عرض أقل" : "اقرأ المزيد"}
+            </button>
+          )}
+        </div>
       ) : (
         <p className="story-body muted-body">
-          منشور وسائط بدون نص — راجع الوسيط المتاح أو افتح المنشور الأصلي.
+          منشور {post.media === "video" ? "فيديو" : "صورة"} بدون نص.
         </p>
       )}
 
-      {primaryMedia && !mediaBroken && post.media === "photo" && (
+      {post.media === "photo" && activePhoto && (
         <img
           className="story-media"
-          src={primaryMedia}
+          src={activePhoto}
           alt="الصورة المرفقة بالمنشور"
-          width={primaryMedia === "/demo/program.png" ? 900 : undefined}
-          height={primaryMedia === "/demo/program.png" ? 300 : undefined}
+          width={activePhoto === "/demo/program.png" ? 900 : undefined}
+          height={activePhoto === "/demo/program.png" ? 300 : undefined}
           loading="lazy"
-          onError={() => setMediaBroken(true)}
+          onError={() => setPhotoIdx((i) => i + 1)}
         />
       )}
 
-      {primaryMedia && !mediaBroken && post.media === "video" && (
+      {post.media === "video" && activeVideo && (
         <video
           className="story-media"
           aria-label="الفيديو المرفق بالمنشور"
           controls
           playsInline
           preload="metadata"
-          poster={fallbackPhoto}
-          onError={() => setMediaBroken(true)}
-          src={primaryMedia}
+          poster={activeThumb}
+          onError={() => setVideoIdx((i) => i + 1)}
+          src={activeVideo}
         />
       )}
 
-      {post.media === "video" &&
-        (mediaBroken || !primaryMedia) &&
-        fallbackPhoto &&
-        !thumbBroken && (
-          <figure className="media-fallback">
-            <img
-              className="story-media"
-              src={fallbackPhoto}
-              alt="لقطة معاينة للفيديو"
-              loading="lazy"
-              onError={() => setThumbBroken(true)}
-            />
-            <figcaption className="minor">
-              رابط ملف الفيديو غير متاح للمعاينة المباشرة؛ يظهر الغلاف مع رابط
-              المنشور الأصلي.
+      {post.media === "video" && !activeVideo && activeThumb && (
+        <figure className="media-fallback">
+          <img
+            className="story-media"
+            src={activeThumb}
+            alt="لقطة معاينة للفيديو"
+            loading="lazy"
+            onError={() => setThumbIdx((i) => i + 1)}
+          />
+          {targetUrl && (
+            <figcaption>
+              <a
+                className="media-link-cta"
+                href={targetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span aria-hidden>▶</span> {mediaActionLabel}
+              </a>
             </figcaption>
-          </figure>
-        )}
+          )}
+        </figure>
+      )}
 
-      {post.media !== "text" &&
-        (mediaBroken || !primaryMedia) &&
-        (!fallbackPhoto || thumbBroken) && (
-          <p className="minor media-unavailable">
-            معاينة الوسائط غير متاحة حاليًا (الروابط المؤقتة تنتهي صلاحيتها).
-            النص ورابط المنشور الأصلي متاحان.
-          </p>
+      {((post.media === "photo" && !activePhoto) ||
+        (post.media === "video" && !activeVideo && !activeThumb)) &&
+        targetUrl && (
+          <a
+            className="media-link-card"
+            href={targetUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span className="media-link-icon" aria-hidden>
+              {post.media === "video" ? "▶" : "▣"}
+            </span>
+            <span className="media-link-copy">
+              <strong>{mediaHeading}</strong>
+              {firstLineTitle && (
+                <span className="media-link-sub">{firstLineTitle}</span>
+              )}
+            </span>
+            <span className="media-link-cta">{mediaActionLabel} ↗</span>
+          </a>
         )}
 
       {hasEngagement && (

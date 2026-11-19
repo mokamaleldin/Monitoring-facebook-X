@@ -13,12 +13,13 @@
   font-display: swap;
 }
 :root {
-  --navy: #092742;
-  --ink: #102d43;
+  --navy: #07172c;
+  --ink: #0f253d;
   --muted: #536978;
-  --border: #d8e1e5;
-  --accent: #006c70;
-  --paper: #f4f7f7;
+  --border: #d8e2ea;
+  --accent: #0277bd;
+  --sky: #38bdf8;
+  --paper: #f4f7fa;
 }
 * {
   box-sizing: border-box;
@@ -79,7 +80,7 @@ a {
   grid-template-columns: 206px minmax(0, 1fr);
 }
 .rail {
-  background: linear-gradient(165deg, #103758, var(--navy) 55%, #071c30);
+  background: linear-gradient(165deg, #0c2547, var(--navy) 58%, #040d1b);
   color: white;
   display: flex;
   flex-direction: column;
@@ -88,18 +89,25 @@ a {
 }
 .rail-brand {
   border-bottom: 1px solid #ffffff24;
-  padding: 0 8px 22px;
-  margin: 0 5px 28px;
+  padding: 0 8px 20px;
+  margin: 0 5px 26px;
 }
 .brand {
   display: inline-block;
-  width: 112px;
-  height: 52px;
-  background-image: url("/brand/kashida.png");
-  background-size: 145% auto;
-  background-position: 50% 55%;
-  border-radius: 5px;
+  width: 124px;
+  height: 44px;
+  background-color: var(--navy);
+  background-image: url("/brand/kashida-logo-white.png");
+  background-repeat: no-repeat;
+  background-size: 80% auto;
+  background-position: center;
+  border-radius: 8px;
   vertical-align: middle;
+}
+.rail .brand {
+  background-color: transparent;
+  background-size: 88% auto;
+  border-radius: 0;
 }
 .rail nav {
   display: grid;
@@ -113,9 +121,9 @@ a {
   font-size: 16px;
 }
 .rail nav button[aria-current] {
-  background: #ffffff19;
+  background: #ffffff16;
   color: white;
-  box-shadow: inset -3px 0 #8ed7cd;
+  box-shadow: inset -3px 0 var(--sky);
 }
 .rail nav button span {
   margin-inline-end: 8px;
@@ -918,10 +926,10 @@ bdi {
 }
 .runs-table {
   --label-2: "الحالة";
-  --label-3: "الطلبات / usage";
-  --label-4: "الخصم / المتبقي";
-  --label-5: "جديد / محدث";
-  --label-6: "التفاصيل";
+  --label-3: "الطلبات المنفذة";
+  --label-4: "الرصيد المستهلك / المتبقي";
+  --label-5: "الأخبار المضافة";
+  --label-6: "نتيجة كل مصدر";
 }
 @container (width < 600px) {
   .data-table,
@@ -957,4 +965,106 @@ bdi {
   .form-grid-3 {
     grid-template-columns: 1fr;
   }
+}
+
+/* Read-more clamping, clickable media link card, and simplified collection tab */
+.story-text-wrap {
+  margin: 14px 0;
+}
+.story-text-wrap .story-body {
+  margin: 0;
+}
+.story-body.clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.read-more-btn {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+}
+.media-link-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  margin: 0 0 13px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f0f7fc, #f7fafc);
+  border: 1px solid #cce3f2;
+  color: var(--ink);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.media-link-card:hover {
+  border-color: var(--accent);
+  background: #e9f4fc;
+}
+.media-link-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  background: var(--navy);
+  color: var(--sky);
+  font-size: 17px;
+  flex: none;
+}
+.media-link-copy {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.media-link-copy strong {
+  font-size: 15px;
+  color: var(--navy);
+}
+.media-link-sub {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media-link-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.panel-desc {
+  margin: 0 0 14px;
+  line-height: 1.75;
+}
+.advanced-toggle {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  font-size: 14px;
+}
+.advanced-toggle summary {
+  color: var(--muted);
+  font-weight: 600;
+}
+.advanced-toggle .field {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+.empty-inline {
+  background: #f6f9fb;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  color: var(--muted);
+  font-size: 14px;
 }
