@@ -10,22 +10,135 @@ export type Source = {
   locator: string;
 };
 export type Subscription = Source & { active: boolean };
+export type MediaItem = {
+  type: "photo" | "video";
+  url: string;
+};
+export type Engagement = {
+  reactions: number | null;
+  comments: number | null;
+  shares: number | null;
+  views: number | null;
+};
 export type Post = {
   id: string;
   platform: Platform;
   text: string;
   media: Media;
   mediaUrl: string | null;
+  mediaItems?: MediaItem[];
   originalUrl: string | null;
   publishedAt: string | null;
   seenAt: string;
   sources: { id: string; name: string }[];
+  engagement?: Engagement | null;
+  sharedPost?: boolean | null;
+  timeOrigin?: string | null;
+  timeSemanticsVerified?: boolean | null;
 };
 export type Snapshot = {
   sources: Subscription[];
   pending: string[];
   posts: Post[];
   canAdd: boolean;
+  referenceAt?: string | null;
+  referenceLabel?: string | null;
+};
+export type OrgMeta = {
+  id: string;
+  name: string;
+  feedDays: number;
+  canAdd: boolean;
+  sources: Subscription[];
+  pending: string[];
+  referenceAt: string | null;
+  referenceLabel: string | null;
+};
+export type FeedCursor = {
+  seenAt: string;
+  id: string;
+};
+export type FeedPage = {
+  posts: Post[];
+  totalCount: number;
+  hasMore: boolean;
+  nextCursor: FeedCursor | null;
+  referenceAt: string | null;
+  referenceLabel: string | null;
+};
+export type AdminEditor = {
+  userId: string;
+  email: string | null;
+  role: Role;
+};
+export type AdminOrg = {
+  id: string;
+  name: string;
+  maxSources: number;
+  allowAdd: boolean;
+  feedDays: number;
+  activeSourceCount: number;
+  pendingCount: number;
+  editors: AdminEditor[];
+  sources: Subscription[];
+  pending: string[];
+};
+export type CollectionRunItem = {
+  sourceId: string;
+  sourceName: string;
+  sourceKind: string;
+  endpoint: string;
+  status: "attempted" | "ok" | "error" | "uncertain" | "skipped";
+  httpStatus: number | null;
+  returnedCount: number;
+  insertedCount: number;
+  updatedCount: number;
+  emptyResponse: boolean;
+  oldPostsCount: number;
+  missingTimeCount: number;
+  invalidCount: number;
+  creditsCharged: number | null;
+  creditsUncertain: boolean;
+  hasNext: boolean;
+  errorMessage: string | null;
+  elapsedMs: number | null;
+};
+export type CollectionRun = {
+  id: string;
+  runKey: string;
+  platform: Platform;
+  status: "running" | "completed" | "stopped" | "failed";
+  requestCap: number;
+  creditCap: number;
+  requestsMade: number;
+  usageChecks: number;
+  creditsCharged: number;
+  creditsUncertain: boolean;
+  creditsRemaining: number | null;
+  usageBefore: Record<string, unknown> | null;
+  usageAfter: Record<string, unknown> | null;
+  accountUsageDelta: number | null;
+  insertedCount: number;
+  updatedCount: number;
+  stopReason: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+  items: CollectionRunItem[];
+};
+export type OrphanAuthUser = {
+  userId: string;
+  email: string | null;
+};
+export type AdminOverview = {
+  referenceAt: string | null;
+  referenceLabel: string | null;
+  uniqueSources: number;
+  uniqueActiveFacebookSources: number;
+  totalPosts: number;
+  organizations: AdminOrg[];
+  runs: CollectionRun[];
+  orphanUsers?: OrphanAuthUser[];
+  collectorConfigured?: boolean;
 };
 export type FollowResult =
   "added" | "already" | "pending" | "queued" | "limit" | "disabled";
@@ -151,5 +264,7 @@ const cairo = new Intl.DateTimeFormat("ar-EG", {
   hour12: true,
 });
 export function cairoTime(value: string | null): string {
-  return value ? cairo.format(new Date(value)) : "غير متاح";
+  if (!value) return "غير متاح";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "غير متاح" : cairo.format(date);
 }

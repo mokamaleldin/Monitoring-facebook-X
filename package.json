@@ -6,9 +6,16 @@
   "engines": { "node": ">=24" },
   "scripts": {
     "dev": "next dev",
+    "dev:demo": "NEXT_PUBLIC_DATA_MODE=demo next dev",
     "build": "next build --webpack",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "local:supabase": "node scripts/local-supabase.mjs",
+    "bootstrap": "node scripts/bootstrap-auth.mjs",
+    "import:snapshot": "node scripts/import-snapshot.mjs --set-reference-date",
+    "collect:facebook": "node scripts/collect-facebook.mjs",
+    "start:api": "node server/node-server.ts",
+    "serve:out": "node scripts/serve-out.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.0.0",

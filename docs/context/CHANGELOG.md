@@ -1,0 +1,15 @@
+# سجل التغييرات (CHANGELOG)
+
+> أحدث إدخال فوق. سطر أو اتنين لكل تغيير: التاريخ — إيه اتعمل — الملفات — نتيجة الاختبارات.
+
+## 2026-11-19 (v1 Platform)
+- **تنفيذ النسخة الأولى كاملة على فرع `feat/kashida-v1-platform`:**
+  - ترحيل قاعدة البيانات `supabase/migrations/202611190002_platform_v1.sql` (أعمدة العينة والتحليلات، `runtime_config` للتاريخ المرجعي، `collection_runs/items`، ترقيم `newsroom_feed` والبحث العربي على الخادم، دوال الأدمن و`service_role`).
+  - مدخل واحد ومساحتان منفصلتان: ضبط `NEXT_PUBLIC_DATA_MODE=supabase` افتراضيًا، صفحة دخول معزّزة، لوحة أدمن مستقلة `/admin` (إنشاء جهات ومحررين عبر `auth.admin.createUser` مع استكمال آمن لفشل العضوية، اختيار صريح للجهة، إدارة مصادرها وحدودها، سجل الجمع والاستهلاك).
+  - موصل SocialAPIs المحدود من جانب الخادم (`server/socialapis.ts`, `server/collector.ts`, `supabase/functions/*`, `scripts/collect-facebook.mjs`) بحد 5 طلبات / 5 Credits / limit=3 وidempotency كامل، دون صرف رصيد لغياب `SOCIALAPIS_API_KEY`.
+  - أدوات التهيئة والاستيراد والخادم المحلي المتوافق على PGlite (`scripts/bootstrap-auth.mjs`, `scripts/import-snapshot.mjs`, `scripts/local-supabase.mjs`, `scripts/serve-out.mjs`).
+  - اختبارات آلية 18/18 (`tests/*.test.mjs`) + `typecheck` + `build` (`out/` خالٍ من الأسرار والعينة) + اختبار متصفح تفاعلي كامل بـ4 حسابات (أدمن، محرر جديد، `user1@gmail.com`، `user2@gmail.com`).
+
+## 2026-11-19
+- **إنشاء المرجع الدائم للمشروع.** أُضيف `AGENTS.md` (يتحمّل تلقائيًا كل جلسة) و`docs/context/` (STATUS, PROJECT_MAP, DATA_CONTRACTS, CHANGELOG).
+  نُسخ `START-HERE.md` والعينة إلى `docs/context/handoff/`؛ العينة مضافة لـ`.gitignore`. مفيش تعديل على كود التطبيق. `npm test` 10/10.

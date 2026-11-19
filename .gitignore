@@ -11,3 +11,9 @@ coverage/
 .sites-runtime/
 supabase/.temp/
 supabase/.branches/
+
+# Private test data (handoff snapshot) — never commit
+docs/context/handoff/facebook-snapshot.json
+
+# Local PGlite Supabase dev data
+.local-supabase/
