@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+.env*
+!.env.example
+.DS_Store
+.openai/
+.sites-runtime/
+supabase/.temp/
+supabase/.branches/
