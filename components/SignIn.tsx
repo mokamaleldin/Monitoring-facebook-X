@@ -49,10 +49,25 @@ export function SignIn({
     try {
       const result = await client.auth.signInWithPassword({ email, password });
       if (result.error) {
-        setError("تعذّر تسجيل الدخول. راجع البريد الإلكتروني وكلمة السر.");
+        const status =
+          typeof result.error.status === "number" ? result.error.status : null;
+        const msg = String(result.error.message || "").toLowerCase();
+        const isNetworkError =
+          status === 0 ||
+          result.error.name === "AuthRetryableFetchError" ||
+          msg.includes("failed to fetch") ||
+          msg.includes("fetch failed") ||
+          msg.includes("network");
+        setError(
+          isNetworkError
+            ? "تعذّر الاتصال بخادم الدخول. لو شغال محليًا، شغّل الأمر npm run local:supabase أو npm run dev:local."
+            : "تعذّر تسجيل الدخول. راجع البريد الإلكتروني وكلمة السر.",
+        );
       }
     } catch {
-      setError("تعذّر الاتصال بخادم الدخول. جرّب مرة أخرى.");
+      setError(
+        "تعذّر الاتصال بخادم الدخول. لو شغال محليًا، شغّل الأمر npm run local:supabase أو npm run dev:local.",
+      );
     } finally {
       setBusy(false);
     }

@@ -6,6 +6,7 @@
   "engines": { "node": ">=24" },
   "scripts": {
     "dev": "next dev",
+    "dev:local": "node scripts/dev-local.mjs",
     "dev:demo": "NEXT_PUBLIC_DATA_MODE=demo next dev",
     "build": "next build --webpack",
     "typecheck": "tsc --noEmit",

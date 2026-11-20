@@ -2,6 +2,10 @@
 
 > أحدث إدخال فوق. سطر أو اتنين لكل تغيير: التاريخ — إيه اتعمل — الملفات — نتيجة الاختبارات.
 
+## 2026-11-20 (Login Network Error Clarity + Single-Command Local Dev)
+- التمييز في [SignIn.tsx](../../components/SignIn.tsx) بين خطأ كلمة السر وتعذّر الاتصال بخادم الدخول المحلي (`AuthRetryableFetchError` / `status === 0`).
+- إضافة سكربت [dev-local.mjs](../../scripts/dev-local.mjs) (`npm run dev:local`) لتشغيل `local-supabase` و`next dev` معًا بأمر واحد.
+
 ## 2026-11-20 (Card UX + Group Renaming + Source Icons/Links)
 - **تحسين شكل كارت البوست وأسماء وروابط المصادر:**
   - إضافة أيقونات مميزة حسب نوع المصدر ([Icons.tsx](../../components/Icons.tsx): صفحة فيسبوك / جروب عام / حساب X) وروابط مباشرة قابلة للضغط باسم ورابط كل مصدر على الكارت وفي القائمة الجانبية و«المصادر».
