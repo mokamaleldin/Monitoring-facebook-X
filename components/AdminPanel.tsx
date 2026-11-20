@@ -146,11 +146,6 @@ function AdminWorkspace({ session }: { session: Session }) {
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
   const [editingSourceName, setEditingSourceName] = useState("");
 
-  // Collection trigger state
-  const [runKey, setRunKey] = useState(
-    () => `manual-${new Date().toISOString().slice(0, 10)}-1`,
-  );
-
   const refresh = useCallback(async () => {
     setLoadError("");
     try {
@@ -462,25 +457,23 @@ function AdminWorkspace({ session }: { session: Session }) {
     }
   }
 
-  async function handleRunCollection(e: FormEvent) {
-    e.preventDefault();
+  async function handleRunCollection() {
     clearFeedback();
     setBusy(true);
     try {
+      const freshKey = `pull-${Date.now()}`;
       const res = await backend.adminCollectFacebook({
-        runKey: runKey.trim(),
+        runKey: freshKey,
         maxRequests: 5,
         maxCredits: 5,
       });
       setNotice(
-        res.replayed
-          ? `الدورة (${res.run.runKey}) محفوظة مسبقًا — أُعيدت النتيجة المسجلة دون استهلاك رصيد إضافي.`
-          : `انتهت دورة الجمع (${res.run.runKey}): ${res.run.requestsMade} طلبات، ${res.run.insertedCount} جديد، ${res.run.updatedCount} محدث.`,
+        `تم السحب بنجاح: ${res.run.requestsMade} مصادر، +${res.run.insertedCount} منشور جديد، ${res.run.updatedCount} محدث.`,
       );
       await refresh();
     } catch (err) {
       setErrorMsg(
-        err instanceof Error ? err.message : "تعذّر تشغيل دورة الجمع.",
+        err instanceof Error ? err.message : "تعذّر تشغيل السحب.",
       );
     } finally {
       setBusy(false);
@@ -513,7 +506,7 @@ function AdminWorkspace({ session }: { session: Session }) {
             aria-current={tab === "runs" ? "page" : undefined}
             onClick={() => setTab("runs")}
           >
-            <span aria-hidden>▤</span> الجمع والاستهلاك
+            <span aria-hidden>↻</span> سحب الأخبار
           </button>
         </nav>
         <div className="rail-footer">إدارة منصة كشيدة</div>
@@ -551,7 +544,7 @@ function AdminWorkspace({ session }: { session: Session }) {
                 ? "الجهات والمحررون"
                 : tab === "manage"
                   ? "إدارة جهة ومصادرها"
-                  : "دورة الجمع واستهلاك المزود"}
+                  : "سحب الأخبار"}
             </h1>
             <span className="timezone">بتوقيت القاهرة</span>
           </div>
@@ -1109,219 +1102,115 @@ function AdminWorkspace({ session }: { session: Session }) {
 
           {tab === "runs" && (
             <>
-              <div className="stats-grid">
-                <div className="stat-card">
-                  <span className="minor">مصادر فيسبوك النشطة للسحب</span>
-                  <strong>
-                    {overview.uniqueActiveFacebookSources.toLocaleString("ar-EG")}
-                  </strong>
-                  <span className="minor">كل مصدر مشترك يُسحب مرة واحدة فقط</span>
+              <section className="source-panel simple-pull-card">
+                <div className="simple-pull-head">
+                  <div>
+                    <h2>سحب أخبار فيسبوك الآن</h2>
+                    <p className="minor panel-desc">
+                      المصادر النشطة للسحب:{" "}
+                      <strong>
+                        {overview.uniqueActiveFacebookSources.toLocaleString(
+                          "ar-EG",
+                        )}{" "}
+                        مصادر
+                      </strong>{" "}
+                      · الحالة:{" "}
+                      <strong>
+                        {overview.collectorConfigured
+                          ? "مفتاح السحب جاهز"
+                          : "يحتاج إضافة SOCIALAPIS_API_KEY في .env.local"}
+                      </strong>
+                    </p>
+                  </div>
+                  <button
+                    className="primary pull-now-btn"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void handleRunCollection()}
+                  >
+                    {busy ? "جارٍ السحب…" : "اسحب الآن (مرة واحدة)"}
+                  </button>
                 </div>
-                <div className="stat-card">
-                  <span className="minor">سقف السحبة اليدوية الواحدة</span>
-                  <strong>٥ طلبات · ٥ Credits</strong>
-                  <span className="minor">أحدث ٣ منشورات لكل مصدر (بلا تشغيل تلقائي)</span>
-                </div>
-                <div className="stat-card">
-                  <span className="minor">حالة الربط مع مزود البيانات</span>
-                  <strong>
-                    {overview.collectorConfigured ? "جاهز للسحب" : "غير مربوط بعد"}
-                  </strong>
+
+                <div className="ref-inline-row">
                   <span className="minor">
-                    {overview.collectorConfigured
-                      ? "مفتاح المزود مضبوط على الخادم"
-                      : "لن يُخصم أي رصيد قبل إضافة المفتاح على الخادم"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="admin-two-col">
-                <section className="source-panel">
-                  <h2>سحب أخبار فيسبوك الآن (سحبة يدوية واحدة)</h2>
-                  <p className="minor panel-desc">
-                    يجلب أحدث ٣ منشورات من كل صفحة أو جروب فيسبوك نشط لجميع الجهات
-                    في سحبة واحدة، ويوزّع أخبار المصادر المشتركة تلقائيًا دون تكرار
-                    الدفع لمزود البيانات.
-                  </p>
-                  <form onSubmit={handleRunCollection} className="admin-form">
-                    <button className="primary" type="submit" disabled={busy}>
-                      {busy
-                        ? "جارٍ تنفيذ السحبة…"
-                        : "ابدأ سحبة فيسبوك واحدة الآن"}
-                    </button>
-                    <details className="advanced-toggle">
-                      <summary>إعداد متقدم: رمز منع تكرار السحبة</summary>
-                      <div className="field">
-                        <label htmlFor="collect-run-key">
-                          رمز السحبة (يمنع الخصم مرتين لو ضغطت الزرار بالغلط)
-                        </label>
-                        <input
-                          id="collect-run-key"
-                          dir="ltr"
-                          type="text"
-                          required
-                          maxLength={120}
-                          value={runKey}
-                          onChange={(e) => setRunKey(e.target.value)}
-                        />
-                      </div>
-                    </details>
-                  </form>
-                </section>
-
-                <section className="source-panel">
-                  <h2>توقيت عرض الأخبار للمحررين</h2>
-                  <p className="minor panel-desc">
-                    يعرض تيار الأخبار منشورات آخر ٧ أيام تلقائيًا. لأن العينة
-                    المحفوظة تعود ليوم ٦ نوفمبر، يمكنك التبديل بين عرض العينة الآن
-                    أو التوقيت المباشر عند تشغيل السحب اليومي.
-                  </p>
-                  <p className="minor">
-                    الوضع المفعل حاليًا:{" "}
+                    توقيت عرض الأخبار:{" "}
                     <strong>
                       {overview.referenceAt
-                        ? `وضع العينة (${overview.referenceLabel || overview.referenceAt.slice(0, 10)})`
-                        : "التوقيت المباشر (أخبار اليوم)"}
+                        ? "عينة ٦ نوفمبر"
+                        : "أخبار اليوم المباشرة"}
                     </strong>
-                  </p>
-                  <div className="action-row">
+                  </span>
+                  <div className="row-actions">
                     <button
+                      type="button"
                       className={overview.referenceAt ? "primary" : "secondary"}
-                      aria-pressed={Boolean(overview.referenceAt)}
                       disabled={busy}
                       onClick={() => void handleReferenceToggle(true)}
                     >
                       عرض عينة ٦ نوفمبر
                     </button>
                     <button
+                      type="button"
                       className={!overview.referenceAt ? "primary" : "secondary"}
-                      aria-pressed={!overview.referenceAt}
                       disabled={busy}
                       onClick={() => void handleReferenceToggle(false)}
                     >
-                      التوقيت المباشر (اليوم)
+                      أخبار اليوم
                     </button>
                   </div>
-                </section>
-              </div>
+                </div>
+              </section>
 
               <section className="source-panel">
-                <h2 id="runs-table-caption">سجل السحبات وتكلفة المزود</h2>
-                <p className="minor panel-desc">
-                  دفتر متابعة لإدارة كشيدة فقط: يسجّل كل سحبة حية تمت، عدد الطلبات
-                  والرصيد المستهلك والمتبقي عند المزود، والأخبار الجديدة مقابل
-                  المكررة لكل مصدر.
-                </p>
+                <h2 id="runs-table-caption">نتيجة آخر سحبة</h2>
                 {!overview.runs.length ? (
                   <div className="empty-inline">
-                    لم تُجرَ أي سحبة حية من فيسبوك بعد (٠ طلبات · ٠ Credits
-                    مستهلكة). عند تشغيل أول سحبة سيظهر التقرير الكامل هنا.
+                    لم يتم السحب بعد. اضغط «اسحب الآن» لتجربة السحب مرة واحدة
+                    وستظهر نتيجة كل مصدر هنا فورًا.
                   </div>
                 ) : (
-                  <div
-                    tabIndex={0}
-                    role="region"
-                    aria-labelledby="runs-table-caption"
-                    className="table-wrapper"
-                  >
-                    <table className="data-table runs-table">
-                      <thead>
-                        <tr>
-                          <th scope="col">تاريخ السحبة والرمز</th>
-                          <th scope="col">الحالة</th>
-                          <th scope="col">الطلبات المنفذة</th>
-                          <th scope="col">الرصيد المستهلك / المتبقي</th>
-                          <th scope="col">الأخبار المضافة</th>
-                          <th scope="col">نتيجة كل مصدر</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {overview.runs.map((run) => (
-                          <tr key={run.id}>
-                            <th scope="row">
-                              <div>{cairoTime(run.startedAt)}</div>
-                              <div className="minor" dir="ltr">
-                                {run.runKey}
-                              </div>
-                            </th>
-                            <td>
-                              <strong>
-                                {runStatusLabel[run.status] || run.status}
-                              </strong>
-                              {run.stopReason && (
-                                <div className="minor">{run.stopReason}</div>
-                              )}
-                            </td>
-                            <td>
-                              {run.requestsMade.toLocaleString("ar-EG")} من{" "}
-                              {run.requestCap.toLocaleString("ar-EG")} طلب
-                              <div className="minor">
-                                فحوص الرصيد:{" "}
-                                {run.usageChecks.toLocaleString("ar-EG")}
-                              </div>
-                            </td>
-                            <td>
-                              {run.creditsCharged.toLocaleString("ar-EG")} Credits
-                              {run.creditsUncertain ? " (غير مؤكد)" : ""}
-                              {run.accountUsageDelta !== null && (
-                                <div className="minor">
-                                  الفرق الفعلي:{" "}
-                                  {run.accountUsageDelta.toLocaleString("ar-EG")}
-                                </div>
-                              )}
-                              {run.creditsRemaining !== null && (
-                                <div className="minor">
-                                  المتبقي:{" "}
-                                  {run.creditsRemaining.toLocaleString("ar-EG")}
-                                </div>
-                              )}
-                            </td>
-                            <td>
-                              +{run.insertedCount.toLocaleString("ar-EG")} جديد ·{" "}
-                              {run.updatedCount.toLocaleString("ar-EG")} محدث
-                            </td>
-                            <td>
-                              <details>
-                                <summary>
-                                  عرض المصادر (
-                                  {run.items.length.toLocaleString("ar-EG")})
-                                </summary>
-                                <ul className="receipts">
-                                  {run.items.map((it) => (
-                                    <li key={it.sourceId}>
-                                      <strong>
-                                        {it.sourceName} —{" "}
-                                        {itemStatusLabel[it.status] || it.status}
-                                        {it.httpStatus
-                                          ? ` (${it.httpStatus})`
-                                          : ""}
-                                      </strong>
-                                      <span className="minor">
-                                        نتائج: {it.returnedCount} · جديد:{" "}
-                                        {it.insertedCount} · محدث:{" "}
-                                        {it.updatedCount}
-                                        {it.emptyResponse
-                                          ? " · لا توجد منشورات جديدة"
-                                          : ""}
-                                        {it.oldPostsCount > 0
-                                          ? ` · قديم: ${it.oldPostsCount}`
-                                          : ""}
-                                        {it.missingTimeCount > 0
-                                          ? ` · بلا وقت نشر: ${it.missingTimeCount}`
-                                          : ""}
-                                        {it.errorMessage
-                                          ? ` · ${it.errorMessage}`
-                                          : ""}
-                                      </span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </details>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="topics-list">
+                    {overview.runs.slice(0, 5).map((run) => (
+                      <div key={run.id} className="topic-card">
+                        <div className="topic-top">
+                          <div className="topic-main">
+                            <strong>
+                              {cairoTime(run.startedAt)} —{" "}
+                              {runStatusLabel[run.status] || run.status}
+                            </strong>
+                            <div className="minor">
+                              سُحب {run.requestsMade.toLocaleString("ar-EG")}{" "}
+                              مصادر · +{run.insertedCount.toLocaleString("ar-EG")}{" "}
+                              جديد · {run.updatedCount.toLocaleString("ar-EG")}{" "}
+                              محدث
+                              {run.creditsRemaining !== null
+                                ? ` · المتبقي: ${run.creditsRemaining.toLocaleString("ar-EG")} Credits`
+                                : ""}
+                              {run.stopReason ? ` · ${run.stopReason}` : ""}
+                            </div>
+                          </div>
+                        </div>
+                        {run.items.length > 0 && (
+                          <ul className="receipts">
+                            {run.items.map((it) => (
+                              <li key={it.sourceId}>
+                                <strong>
+                                  {it.sourceName} —{" "}
+                                  {itemStatusLabel[it.status] || it.status}
+                                </strong>
+                                <span className="minor">
+                                  نتائج: {it.returnedCount} · جديد:{" "}
+                                  {it.insertedCount}
+                                  {it.emptyResponse ? " · لا جديد" : ""}
+                                  {it.errorMessage ? ` · ${it.errorMessage}` : ""}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </section>

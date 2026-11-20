@@ -18,6 +18,7 @@ import {
   HttpError,
 } from "../server/admin-service.ts";
 import { createPgCollectorStore } from "../server/pg-collector-store.ts";
+import { buildTenantTrendsReport } from "../server/trends-service.ts";
 import { loadLocalEnv } from "./env-loader.mjs";
 
 const DEFAULT_PUBLISHABLE_KEY = "kashida-local-publishable-key";
@@ -769,6 +770,36 @@ export async function startLocalSupabase(options = {}) {
             return r.rows;
           });
           send(200, rows);
+        } catch (err) {
+          const mapped = mapPgError(err);
+          send(mapped.status, mapped.body);
+        }
+        return;
+      }
+
+      // Edge Function route: /functions/v1/trends-api (authenticated tenant-scoped Facebook NLP + live Egypt X & Google trends)
+      if (
+        method === "GET" &&
+        (pathname === "/functions/v1/trends-api" ||
+          pathname === "/functions/v1/trends-api/")
+      ) {
+        const caller = await resolveCaller(req);
+        if (caller.role !== "authenticated" || !caller.userId) {
+          send(401, { error: "يرجى تسجيل الدخول أولًا.", code: "unauthenticated" });
+          return;
+        }
+        const orgId = parsed.searchParams.get("org") || "";
+        const forceRefresh = parsed.searchParams.get("refresh") === "1";
+        try {
+          const snap = await callRpc(caller, "newsroom_snapshot", { p_org: orgId });
+          const report = await buildTenantTrendsReport({
+            posts: Array.isArray(snap?.posts) ? snap.posts : [],
+            referenceAt: snap?.referenceAt ?? null,
+            referenceLabel: snap?.referenceLabel ?? null,
+            forceRefresh,
+            fetchFn: options.trendsFetchFn,
+          });
+          send(200, report);
         } catch (err) {
           const mapped = mapPgError(err);
           send(mapped.status, mapped.body);

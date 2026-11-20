@@ -6,6 +6,7 @@ import {
   followDemo,
   orgMetaDemo,
   readDemo,
+  snapshotDemo,
   type DemoState,
 } from "../lib/demo";
 import * as backend from "../lib/backend";
@@ -18,12 +19,15 @@ import {
   type OrgMeta,
   type Platform,
   type Space,
+  type TrendsReport,
 } from "../lib/model";
+import { analyzeFacebookTrends } from "../lib/trends-engine";
 import { Feed } from "./Feed";
 import { Sources } from "./Sources";
+import { Trends } from "./Trends";
 
 const storageKey = "kashida:newsroom:demo:v1";
-type View = "feed" | "sources";
+type View = "feed" | "trends" | "sources";
 
 export default function Workspace({
   spaces,
@@ -36,6 +40,7 @@ export default function Workspace({
 }) {
   const [org, setOrg] = useState(spaces[0].id);
   const [view, setView] = useState<View>("feed");
+  const [feedSearchQuery, setFeedSearchQuery] = useState("");
   const currentSpace = spaces.find((s) => s.id === org) ?? spaces[0];
 
   return (
@@ -50,9 +55,18 @@ export default function Workspace({
         <nav aria-label="التصفح">
           <button
             aria-current={view === "feed" ? "page" : undefined}
-            onClick={() => setView("feed")}
+            onClick={() => {
+              setFeedSearchQuery("");
+              setView("feed");
+            }}
           >
             <span aria-hidden>▤</span> تيار الأخبار
+          </button>
+          <button
+            aria-current={view === "trends" ? "page" : undefined}
+            onClick={() => setView("trends")}
+          >
+            <span aria-hidden>#</span> الهاشتاجات والترندات
           </button>
           <button
             aria-current={view === "sources" ? "page" : undefined}
@@ -114,7 +128,12 @@ export default function Workspace({
           isDemo={isDemo}
           isAdmin={currentSpace.role === "platform_admin"}
           view={view}
+          feedSearchQuery={feedSearchQuery}
           openSources={() => setView("sources")}
+          onSearchInFeed={(query) => {
+            setFeedSearchQuery(query);
+            setView("feed");
+          }}
         />
       </main>
     </div>
@@ -136,13 +155,17 @@ function WorkspaceContent({
   isDemo,
   isAdmin,
   view,
+  feedSearchQuery,
   openSources,
+  onSearchInFeed,
 }: {
   org: string;
   isDemo: boolean;
   isAdmin: boolean;
   view: View;
+  feedSearchQuery: string;
   openSources: () => void;
+  onSearchInFeed: (query: string) => void;
 }) {
   const [meta, setMeta] = useState<OrgMeta | null>(null);
   const [failed, setFailed] = useState(false);
@@ -203,6 +226,42 @@ function WorkspaceContent({
         return feedDemo(readDemoSafe(), { org, ...params });
       }
       return backend.feed({ org, ...params });
+    },
+    [org, isDemo],
+  );
+
+  const loadTrends = useCallback(
+    async (refresh: boolean): Promise<TrendsReport> => {
+      if (isDemo) {
+        const snap = snapshotDemo(readDemoSafe(), org);
+        return {
+          country: "EG",
+          generatedAt: new Date().toISOString(),
+          cached: false,
+          facebook: analyzeFacebookTrends(snap.posts, [], { country: "EG" }),
+          x: {
+            platform: "X",
+            provider: "وضع العرض التجريبي",
+            coverage: "demo",
+            country: "EG",
+            url: "https://getdaytrends.com/egypt/",
+            fetchedAt: null,
+            items: [],
+            error: "جلب ترندات X الحية لمصر يتطلب وضع Supabase.",
+          },
+          google: {
+            platform: "Google",
+            provider: "وضع العرض التجريبي",
+            coverage: "demo",
+            country: "EG",
+            url: "https://trends.google.com/trending?geo=EG",
+            fetchedAt: null,
+            items: [],
+            error: "جلب ترندات Google الحية لمصر يتطلب وضع Supabase.",
+          },
+        };
+      }
+      return backend.trends(org, { refresh });
     },
     [org, isDemo],
   );
@@ -290,8 +349,14 @@ function WorkspaceContent({
     <section className="page">
       <div className="page-heading">
         <div>
-          <h1>{view === "feed" ? "تيار الأخبار" : "المصادر"}</h1>
-          {meta?.referenceAt && (
+          <h1>
+            {view === "feed"
+              ? "تيار الأخبار"
+              : view === "trends"
+                ? "الهاشتاجات والترندات · مصر"
+                : "المصادر"}
+          </h1>
+          {meta?.referenceAt && view !== "sources" && (
             <p className="ref-badge">
               عرض مرجعي: {meta.referenceLabel || meta.referenceAt.slice(0, 10)}{" "}
               (التواريخ الأصلية للمنشورات محفوظة كما سُجلت)
@@ -320,7 +385,10 @@ function WorkspaceContent({
           feedVersion={reload}
           loadFeedPage={loadFeedPage}
           openSources={openSources}
+          initialQuery={feedSearchQuery}
         />
+      ) : view === "trends" ? (
+        <Trends loadTrends={loadTrends} onSearchInFeed={onSearchInFeed} />
       ) : (
         <Sources
           data={{

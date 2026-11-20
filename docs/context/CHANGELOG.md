@@ -2,6 +2,14 @@
 
 > أحدث إدخال فوق. سطر أو اتنين لكل تغيير: التاريخ — إيه اتعمل — الملفات — نتيجة الاختبارات.
 
+## 2026-11-21 (Egypt Hashtags & Trends Engine + Fixed Sidebar + Simplified Pull)
+- **محرك الهاشتاجات والترندات لمصر (`lib/trends-engine.ts`, `server/trends-service.ts`, `supabase/functions/trends-api/index.ts`, `components/Trends.tsx`):**
+  - قسم جديد «الهاشتاجات والترندات · مصر» أسفل «تيار الأخبار» في مساحة المحرر (معزول لكل جهة عبر RLS).
+  - خوارزمية تحليل عربية قوية لمنشورات فيسبوك الخاصة بالجهة (فلترة السبام والترحيب التلقائي والمسابقات وهاشتاجات الناشرين الذاتية، استخراج الهاشتاجات الصريحة، تجميع TF-IDF وعبارات إخبارية، إبراز الشأن المصري، تقاطع مع ترندات X وGoogle، حد أقصى 15 موضوعًا حقيقيًا دون تأليف، وزر «عرض في التيار»).
+  - جلب حي لترندات مصر من X (عبر `X_BEARER_TOKEN` الرسمي أو قائمة مصر في `GetDayTrends` بعد فحص `robots.txt`) وعمليات بحث Google مصر (`trends.google.com/trending/rss?geo=EG`) مع كاش 15 دقيقة وزر تحديث فوري، بدون صرف SocialAPIs Credits.
+- **تثبيت الشريط الجانبي الأزرق لكشيدة:** `position: sticky; height: 100dvh` في `app/globals.css` لتثبيت اللوجو والقائمة و«كشيدة للرصد الإعلامي» أسفل الشاشة أثناء التمرير.
+- **تبسيط تبويب «سحب الأخبار» في `/admin`:** واجهة خفيفة بزر واحد «اسحب الآن (مرة واحدة)» ونتيجة آخر سحبة وتبديل التوقيت.
+
 ## 2026-11-20 (Login Network Error Clarity + Single-Command Local Dev)
 - التمييز في [SignIn.tsx](../../components/SignIn.tsx) بين خطأ كلمة السر وتعذّر الاتصال بخادم الدخول المحلي (`AuthRetryableFetchError` / `status === 0`).
 - إضافة سكربت [dev-local.mjs](../../scripts/dev-local.mjs) (`npm run dev:local`) لتشغيل `local-supabase` و`next dev` معًا بأمر واحد.

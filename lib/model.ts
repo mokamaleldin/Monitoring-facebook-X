@@ -140,6 +140,83 @@ export type AdminOverview = {
   orphanUsers?: OrphanAuthUser[];
   collectorConfigured?: boolean;
 };
+
+export type ExternalTrendItem = {
+  rank: number;
+  name: string;
+  kind: "hashtag" | "topic" | "search_topic";
+  url: string;
+  platform: "X" | "Google";
+  trafficLabel?: string | null;
+  tweetCount?: number | null;
+  publishedAt?: string | null;
+  newsHeadline?: string | null;
+  newsSource?: string | null;
+  newsUrl?: string | null;
+};
+
+export type TrendEvidence = {
+  postId: string;
+  sourceId: string;
+  sourceName: string;
+  headline: string;
+  url: string | null;
+  seenAt: string;
+};
+
+export type ExtractedHashtag = {
+  tag: string;
+  postCount: number;
+  sourceCount: number;
+  evidence: TrendEvidence[];
+};
+
+export type ExtractedTopic = {
+  rank: number;
+  title: string;
+  suggestedHashtag: string;
+  searchQuery: string;
+  score: number;
+  tier: "high" | "medium" | "watch";
+  egyptRelated: boolean;
+  postCount: number;
+  sourceCount: number;
+  engagementTotal: number;
+  matchedTrends: { name: string; platform: "X" | "Google"; url: string }[];
+  evidence: TrendEvidence[];
+};
+
+export type FacebookTrendsAnalysis = {
+  country: "EG";
+  totalPostsConsidered: number;
+  analyzedPosts: number;
+  noiseFilteredCount: number;
+  sourceCount: number;
+  hashtags: ExtractedHashtag[];
+  topics: ExtractedTopic[];
+  referenceAt?: string | null;
+  referenceLabel?: string | null;
+};
+
+export type ExternalTrendsFeed = {
+  platform: "X" | "Google";
+  provider: string;
+  coverage: string;
+  country: "EG";
+  url: string;
+  fetchedAt: string | null;
+  items: ExternalTrendItem[];
+  error: string | null;
+};
+
+export type TrendsReport = {
+  country: "EG";
+  generatedAt: string;
+  cached: boolean;
+  facebook: FacebookTrendsAnalysis;
+  x: ExternalTrendsFeed;
+  google: ExternalTrendsFeed;
+};
 export type FollowResult =
   "added" | "already" | "pending" | "queued" | "limit" | "disabled";
 export const platformName = { facebook: "فيسبوك", x: "X" };

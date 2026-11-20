@@ -1,7 +1,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { pathToFileURL } from "node:url";
+import { createClient } from "@supabase/supabase-js";
 import { handleAdminRequest } from "./admin-service.ts";
 import { createSupabaseAdminBackend } from "./supabase-admin-backend.ts";
+import { buildTenantTrendsReport } from "./trends-service.ts";
 
 function corsHeaders(origin: string | undefined, allowedOrigin: string) {
   const allow =
@@ -60,6 +62,49 @@ export function createAdminHttpServer(options: {
 
     const parsed = new URL(req.url || "/", "http://localhost");
     let subpath = parsed.pathname;
+
+    // Tenant-scoped Egypt trends route (X + Google + org's Facebook NLP)
+    if (
+      (req.method === "GET") &&
+      (subpath === "/functions/v1/trends-api" || subpath === "/trends-api")
+    ) {
+      const authHeader = req.headers.authorization || "";
+      const match = authHeader.match(/^Bearer\s+(.+)$/i);
+      if (!match?.[1]) {
+        res.writeHead(401, headers);
+        res.end(JSON.stringify({ error: "يرجى تسجيل الدخول أولًا." }));
+        return;
+      }
+      const jwt = match[1].trim();
+      const orgId = parsed.searchParams.get("org") || "";
+      const forceRefresh = parsed.searchParams.get("refresh") === "1";
+      const asUser = createClient(
+        options.supabaseUrl,
+        options.publishableKey || options.serviceRoleKey,
+        {
+          auth: { autoRefreshToken: false, persistSession: false },
+          global: { headers: { Authorization: `Bearer ${jwt}` } },
+        },
+      );
+      const { data: snap, error } = await asUser.rpc("newsroom_snapshot", {
+        p_org: orgId,
+      });
+      if (error) {
+        res.writeHead(error.code === "42501" ? 403 : 400, headers);
+        res.end(JSON.stringify({ error: error.message }));
+        return;
+      }
+      const report = await buildTenantTrendsReport({
+        posts: Array.isArray(snap?.posts) ? snap.posts : [],
+        referenceAt: snap?.referenceAt ?? null,
+        referenceLabel: snap?.referenceLabel ?? null,
+        forceRefresh,
+      });
+      res.writeHead(200, headers);
+      res.end(JSON.stringify(report));
+      return;
+    }
+
     if (subpath.startsWith("/functions/v1/admin-api")) {
       subpath = subpath.slice("/functions/v1/admin-api".length) || "/";
     } else if (subpath.startsWith("/admin-api")) {

@@ -10,6 +10,7 @@ import type {
   Platform,
   Snapshot,
   Space,
+  TrendsReport,
 } from "./model.ts";
 
 export const mode = process.env.NEXT_PUBLIC_DATA_MODE || "supabase";
@@ -31,6 +32,11 @@ const adminApiBase = (
 const collectApiUrl = (
   process.env.NEXT_PUBLIC_COLLECT_API_URL?.trim() ||
   (url ? `${url}/functions/v1/collect-facebook` : "")
+).replace(/\/$/, "");
+
+const trendsApiUrl = (
+  process.env.NEXT_PUBLIC_TRENDS_API_URL?.trim() ||
+  (url ? `${url}/functions/v1/trends-api` : "")
 ).replace(/\/$/, "");
 
 export class ApiError extends Error {
@@ -320,4 +326,13 @@ export async function adminCollectFacebook(input: {
     collectApiUrl,
     { method: "POST", body: input },
   );
+}
+
+export async function trends(
+  org: string,
+  options: { refresh?: boolean } = {},
+): Promise<TrendsReport> {
+  const qs = new URLSearchParams({ org });
+  if (options.refresh) qs.set("refresh", "1");
+  return callServerJson<TrendsReport>(`${trendsApiUrl}?${qs.toString()}`);
 }

@@ -14,29 +14,35 @@ components/
   SignIn.tsx            نموذج الدخول المشترك + Brand + ConfigMissingGate
   Newsroom.tsx          بوابة /: تفصل المحرر (مساحة جهته فقط) عن platform_admin (تحويل تلقائي إلى /admin/)
   Workspace.tsx         مساحة المحرر: rail + header (اسم جهته فقط) + orgMeta + تمرير loadFeedPage
-  Feed.tsx              تيار الأخبار: فلاتر FB/X ونوع/مصدر/بحث + ترقيم cursor من الخادم + تمرير لا نهائي + Article
-  Sources.tsx           إدارة المصادر (دفعة روابط، إيقاف/استئناف، طلبات معلقة)
-  AdminPanel.tsx        لوحة أدمن كشيدة (/admin): الجهات والمحررون، إدارة جهة محددة، استكمال العضويات المعلقة، الجمع والسجل
+  Feed.tsx              تيار الأخبار: فلاتر FB/X ونوع/مصدر/بحث + ترقيم cursor من الخادم + اقرأ المزيد + كارت وسائط + أيقونات/روابط المصادر
+  Trends.tsx            قسم الهاشتاجات والترندات (مصر): تحليل فيسبوك لمصادر الجهة + ترندات X مصر + بحث Google مصر
+  Sources.tsx           إدارة المصادر (دفعة روابط، إيقاف/استئناف، طلبات معلقة، أيقونات وروابط)
+  Icons.tsx             أيقونات SVG خفيفة لأنواع المصادر والوسائط والروابط الخارجية
+  AdminPanel.tsx        لوحة أدمن كشيدة (/admin): الجهات والمحررون، إدارة جهة وتعديل أسماء المصادر، سحب الأخبار المبسّط
 lib/
-  model.ts              كل الأنواع المشتركة (Post, OrgMeta, FeedPage, AdminOverview, CollectionRun...) + parseSource/foldArabic/cairoTime
+  model.ts              كل الأنواع المشتركة (Post, OrgMeta, FeedPage, AdminOverview, TrendsReport...) + parseSource/foldArabic/cairoTime
+  trends-engine.ts      محرك التحليل العربي للهاشتاجات والموضوعات (فلتر سبام، TF-IDF، شأن مصري، تقاطع X/Google، بلا تأليف)
   snapshot.ts           محوّل نقي لعينة facebook-snapshot.json (لا يستورد الملف مباشرة؛ آمن للتصدير العام)
-  backend.ts            عميل Supabase (افتراضي NEXT_PUBLIC_DATA_MODE=supabase) + RPCs + admin-api & collect-facebook
+  backend.ts            عميل Supabase (افتراضي NEXT_PUBLIC_DATA_MODE=supabase) + RPCs + admin-api & collect-facebook & trends-api
   demo.ts               محاكاة الوضع التجريبي الصريح (NEXT_PUBLIC_DATA_MODE=demo) + feedDemo/orgMetaDemo
   fixtures.ts           بيانات العرض التمثيلية لوضع demo فقط
 server/
   socialapis.ts         عميل SocialAPIs المحدود (x-api-token, limit=3, after_time YYYY-MM-DD, no redirect/retry) + normalizer
   collector.ts          محرك دورة الجمع الواحدة المحدودة (runKey idempotent، حد 5 طلبات/5 Credits، تسجيل /usage منفصل)
+  trends-service.ts     جلب ترندات مصر (Google RSS + GetDayTrends/X API) بكاش 15 دقيقة + دمج تحليل فيسبوك
   pg-collector-store.ts منفّذ CollectorStore على PostgreSQL/PGlite
-  admin-service.ts      منطق مسارات /admin-api و/collect-facebook + تحقق platform_admin + استكمال العضوية الجزئي
+  admin-service.ts      منطق مسارات /admin-api و/collect-facebook + تحقق platform_admin + استكمال العضوية الجزئي + تعديل اسم المصدر
   supabase-admin-backend.ts ربط AdminBackend مع Supabase المستضاف عبر service_role RPCs
   node-server.ts        خادم Node خفيف اختياري (npm run start:api) بديل عن Edge Functions عند الحاجة
 supabase/
   migrations/
     202611190001_newsroom.sql   المخطط الأساسي + RLS + RPCs الأولى
-    202611190002_platform_v1.sql ترقية v1: أعمدة العينة، runtime_config (المرجع الزمني)، collection_runs، newsroom_feed، دوال الأدمن وservice_role
+    202611190002_platform_v1.sql ترقية v1: أعمدة العينة، runtime_config، collection_runs، newsroom_feed، دوال الأدمن وservice_role
+    202611200003_rename_source.sql تعديل اسم المصدر من لوحة الأدمن
   functions/
     admin-api/index.ts          Supabase Edge Function لإدارة الجهات والمحررين والمصادر
     collect-facebook/index.ts   Supabase Edge Function لدورة جمع Facebook الواحدة المحدودة
+    trends-api/index.ts         Supabase Edge Function للهاشتاجات والترندات (مصر)
 scripts/
   env-loader.mjs        قراءة .env.local محليًا دون طباعة الأسرار
   local-supabase.mjs    خادم Supabase محلي متوافق على PGlite (Auth JWT + PostgREST RPC/RLS + Functions) للتطوير والاختبار

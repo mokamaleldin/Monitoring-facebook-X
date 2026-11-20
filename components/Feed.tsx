@@ -404,6 +404,7 @@ export function Feed({
   feedVersion,
   loadFeedPage,
   openSources,
+  initialQuery = "",
 }: {
   sources: Subscription[];
   feedVersion: number;
@@ -416,12 +417,18 @@ export function Feed({
     limit?: number;
   }) => Promise<FeedPage>;
   openSources: () => void;
+  initialQuery?: string;
 }) {
   const [platform, setPlatform] = useState<Platform>("facebook");
   const [media, setMedia] = useState<Media | "all">("all");
   const [source, setSource] = useState("");
-  const [queryInput, setQueryInput] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [queryInput, setQueryInput] = useState(initialQuery);
+  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
+
+  useEffect(() => {
+    setQueryInput(initialQuery);
+    setDebouncedQuery(initialQuery);
+  }, [initialQuery]);
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [totalCount, setTotalCount] = useState(0);
