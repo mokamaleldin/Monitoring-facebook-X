@@ -10,22 +10,212 @@ export type Source = {
   locator: string;
 };
 export type Subscription = Source & { active: boolean };
+export type MediaItem = {
+  type: "photo" | "video";
+  url: string;
+};
+export type Engagement = {
+  reactions: number | null;
+  comments: number | null;
+  shares: number | null;
+  views: number | null;
+};
 export type Post = {
   id: string;
   platform: Platform;
   text: string;
   media: Media;
   mediaUrl: string | null;
+  mediaItems?: MediaItem[];
   originalUrl: string | null;
   publishedAt: string | null;
   seenAt: string;
   sources: { id: string; name: string }[];
+  engagement?: Engagement | null;
+  sharedPost?: boolean | null;
+  timeOrigin?: string | null;
+  timeSemanticsVerified?: boolean | null;
 };
 export type Snapshot = {
   sources: Subscription[];
   pending: string[];
   posts: Post[];
   canAdd: boolean;
+  referenceAt?: string | null;
+  referenceLabel?: string | null;
+};
+export type OrgMeta = {
+  id: string;
+  name: string;
+  feedDays: number;
+  canAdd: boolean;
+  sources: Subscription[];
+  pending: string[];
+  referenceAt: string | null;
+  referenceLabel: string | null;
+};
+export type FeedCursor = {
+  seenAt: string;
+  id: string;
+};
+export type FeedPage = {
+  posts: Post[];
+  totalCount: number;
+  hasMore: boolean;
+  nextCursor: FeedCursor | null;
+  referenceAt: string | null;
+  referenceLabel: string | null;
+};
+export type AdminEditor = {
+  userId: string;
+  email: string | null;
+  role: Role;
+};
+export type AdminOrg = {
+  id: string;
+  name: string;
+  maxSources: number;
+  allowAdd: boolean;
+  feedDays: number;
+  activeSourceCount: number;
+  pendingCount: number;
+  editors: AdminEditor[];
+  sources: Subscription[];
+  pending: string[];
+};
+export type CollectionRunItem = {
+  sourceId: string;
+  sourceName: string;
+  sourceKind: string;
+  endpoint: string;
+  status: "attempted" | "ok" | "error" | "uncertain" | "skipped";
+  httpStatus: number | null;
+  returnedCount: number;
+  insertedCount: number;
+  updatedCount: number;
+  emptyResponse: boolean;
+  oldPostsCount: number;
+  missingTimeCount: number;
+  invalidCount: number;
+  creditsCharged: number | null;
+  creditsUncertain: boolean;
+  hasNext: boolean;
+  errorMessage: string | null;
+  elapsedMs: number | null;
+};
+export type CollectionRun = {
+  id: string;
+  runKey: string;
+  platform: Platform;
+  status: "running" | "completed" | "stopped" | "failed";
+  requestCap: number;
+  creditCap: number;
+  requestsMade: number;
+  usageChecks: number;
+  creditsCharged: number;
+  creditsUncertain: boolean;
+  creditsRemaining: number | null;
+  usageBefore: Record<string, unknown> | null;
+  usageAfter: Record<string, unknown> | null;
+  accountUsageDelta: number | null;
+  insertedCount: number;
+  updatedCount: number;
+  stopReason: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+  items: CollectionRunItem[];
+};
+export type OrphanAuthUser = {
+  userId: string;
+  email: string | null;
+};
+export type AdminOverview = {
+  referenceAt: string | null;
+  referenceLabel: string | null;
+  uniqueSources: number;
+  uniqueActiveFacebookSources: number;
+  totalPosts: number;
+  organizations: AdminOrg[];
+  runs: CollectionRun[];
+  orphanUsers?: OrphanAuthUser[];
+  collectorConfigured?: boolean;
+};
+
+export type ExternalTrendItem = {
+  rank: number;
+  name: string;
+  kind: "hashtag" | "topic" | "search_topic";
+  url: string;
+  platform: "X" | "Google";
+  trafficLabel?: string | null;
+  tweetCount?: number | null;
+  publishedAt?: string | null;
+  newsHeadline?: string | null;
+  newsSource?: string | null;
+  newsUrl?: string | null;
+};
+
+export type TrendEvidence = {
+  postId: string;
+  sourceId: string;
+  sourceName: string;
+  headline: string;
+  url: string | null;
+  seenAt: string;
+};
+
+export type ExtractedHashtag = {
+  tag: string;
+  postCount: number;
+  sourceCount: number;
+  evidence: TrendEvidence[];
+};
+
+export type ExtractedTopic = {
+  rank: number;
+  title: string;
+  suggestedHashtag: string;
+  searchQuery: string;
+  score: number;
+  tier: "high" | "medium" | "watch";
+  egyptRelated: boolean;
+  postCount: number;
+  sourceCount: number;
+  engagementTotal: number;
+  matchedTrends: { name: string; platform: "X" | "Google"; url: string }[];
+  evidence: TrendEvidence[];
+};
+
+export type FacebookTrendsAnalysis = {
+  country: "EG";
+  totalPostsConsidered: number;
+  analyzedPosts: number;
+  noiseFilteredCount: number;
+  sourceCount: number;
+  hashtags: ExtractedHashtag[];
+  topics: ExtractedTopic[];
+  referenceAt?: string | null;
+  referenceLabel?: string | null;
+};
+
+export type ExternalTrendsFeed = {
+  platform: "X" | "Google";
+  provider: string;
+  coverage: string;
+  country: "EG";
+  url: string;
+  fetchedAt: string | null;
+  items: ExternalTrendItem[];
+  error: string | null;
+};
+
+export type TrendsReport = {
+  country: "EG";
+  generatedAt: string;
+  cached: boolean;
+  facebook: FacebookTrendsAnalysis;
+  x: ExternalTrendsFeed;
+  google: ExternalTrendsFeed;
 };
 export type FollowResult =
   "added" | "already" | "pending" | "queued" | "limit" | "disabled";
@@ -151,5 +341,7 @@ const cairo = new Intl.DateTimeFormat("ar-EG", {
   hour12: true,
 });
 export function cairoTime(value: string | null): string {
-  return value ? cairo.format(new Date(value)) : "غير متاح";
+  if (!value) return "غير متاح";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "غير متاح" : cairo.format(date);
 }

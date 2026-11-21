@@ -1,5 +1,15 @@
 import { catalog, fixtures, demoSpaces, startingFollows } from "./fixtures.ts";
-import type { FollowResult, Post, Snapshot } from "./model.ts";
+import {
+  filterPosts,
+  type FeedCursor,
+  type FeedPage,
+  type FollowResult,
+  type Media,
+  type OrgMeta,
+  type Platform,
+  type Post,
+  type Snapshot,
+} from "./model.ts";
 export type DemoState = Record<
   string,
   { follows: Record<string, boolean>; pending: string[] }
@@ -106,4 +116,60 @@ export function followDemo(
   }
   selection.pending.push(locator);
   return "queued";
+}
+
+export function orgMetaDemo(state: DemoState, org: string): OrgMeta {
+  const snap = snapshotDemo(state, org);
+  const space = demoSpaces.find((s) => s.id === org);
+  return {
+    id: org,
+    name: space?.name ?? org,
+    feedDays: 7,
+    canAdd: snap.canAdd,
+    sources: snap.sources,
+    pending: snap.pending,
+    referenceAt: null,
+    referenceLabel: null,
+  };
+}
+
+export function feedDemo(
+  state: DemoState,
+  params: {
+    org: string;
+    platform: Platform;
+    media: Media | "all";
+    sourceId: string;
+    query: string;
+    cursor?: FeedCursor | null;
+    limit?: number;
+  },
+): FeedPage {
+  const snap = snapshotDemo(state, params.org);
+  const filtered = filterPosts(
+    snap.posts,
+    params.platform,
+    params.media,
+    params.sourceId,
+    params.query,
+  );
+  const limit = Math.max(1, Math.min(params.limit ?? 8, 50));
+  const afterCursor = params.cursor
+    ? filtered.filter(
+        (p) =>
+          p.seenAt < params.cursor!.seenAt ||
+          (p.seenAt === params.cursor!.seenAt && p.id > params.cursor!.id),
+      )
+    : filtered;
+  const hasMore = afterCursor.length > limit;
+  const posts = afterCursor.slice(0, limit);
+  const last = posts.at(-1);
+  return {
+    posts,
+    totalCount: filtered.length,
+    hasMore,
+    nextCursor: hasMore && last ? { seenAt: last.seenAt, id: last.id } : null,
+    referenceAt: null,
+    referenceLabel: null,
+  };
 }
